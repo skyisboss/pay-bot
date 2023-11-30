@@ -5,19 +5,19 @@ import { logger } from '@/logger'
 import { WalletView } from './wallet'
 import { MyBot, BotContext, AnyObjetc, SceneInfo, CallbackRequest } from '@/@types/types'
 import { SettingView } from './setting'
-import { ExtendView } from './extend'
 import { PaymentView } from './payment'
 import { StoreView } from './store'
 import { SecuredView } from './secured'
+import { InviteView } from './invite'
 
 const ViewsObject: AnyObjetc = {
   start: StartHome,
   wallet: WalletView,
   setting: SettingView,
-  extend: ExtendView,
   payment: PaymentView,
   store: StoreView,
   secured: SecuredView,
+  invite: InviteView,
 }
 export const useHandler = async (bot: MyBot) => {
   // 开始页面

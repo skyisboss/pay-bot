@@ -11,7 +11,7 @@ export const StartHome = async (ctx: BotContext) => {
   btn.text(ctx.t('payment'), '/payment').row()
   btn.text(ctx.t('secured'), '/secured')
   btn.text(ctx.t('store'), '/store').row()
-  btn.text(ctx.t('invite'), '/extend/invite').row()
+  btn.text(ctx.t('invite'), '/invite').row()
   btn.text(ctx.t('setting'), '/setting')
 
   await display(ctx, ctx.t('homeWelcome'), btn.inline_keyboard, ctx.session.request.replace)

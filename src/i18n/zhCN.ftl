@@ -478,32 +478,32 @@ settingCurrencytMsg =
 # 邀请好友
 sendToFriend = 发送给朋友
 inviteLog = 🔖 邀请记录
-inviteWithdraw = 🎁 提领佣金
-inviteWithdrawSuccess = 提领成功，佣金将转入钱包余额
-inviteWithdrawFail = 提领失败，没有足够的余额
+inviteWithdraw = 🎁 提取佣金
+inviteWithdrawSuccess = 提取成功，佣金将转入钱包余额
+inviteWithdrawFail = 提取失败，没有足够的余额
 inviteTime1 = 今日
 inviteTime2 = 昨日
 inviteTime3 = 月度
 inviteTime4 = 全部
 inviteMsg = 
-    <b>{invite}</b> · <a href="https://grammy.dev/">了解更多 ›</a>
+    <b>{invite}</b> · <a href="https://google.com/">了解更多 ›</a>
 
     · Telegram用户点击邀请链接即可完成注册
     · 完成注册新用户将自动成为您的下级代理
     · 您将获得下级代理产生手续费的 <b>50%</b> 作为奖励
-    · <a href="https://grammy.dev/">了解更多 ›</a>
+    · <a href="https://google.com/">了解更多 ›</a>
 
     <b>👇 邀请链接(点击可复制)</b>
     <code>{$link}</code>
 
 inviteDetail = 
-    <b>{invite}</b> · <a href="https://grammy.dev/">了解更多 ›</a>
+    <b>{invite}</b> · <a href="https://google.com/">了解更多 ›</a>
 
     <b>· 我的邀请: </b>
-       今日邀请: {$today}
-       昨日邀请: {$yesterday}
-       月度邀请: {$month}
-       全部邀请: {$total}
+       今日邀请: {$count1}
+       昨日邀请: {$count2}
+       月度邀请: {$count3}
+       全部邀请: {$count4}
 
     <b>· 我的佣金: </b>
        TRC20 · USDT: {$trc20}

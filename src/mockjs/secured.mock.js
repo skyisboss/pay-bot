@@ -27,7 +27,7 @@ const release = {
       },
     })
   },
-  [`POST ${BASE_URL}/invite/withdraw`]: (req, res) => {
+  [`POST ${BASE_URL}/secured/withdraw`]: (req, res) => {
     console.log('---->', req.params)
     return res.json({
       ...obj,

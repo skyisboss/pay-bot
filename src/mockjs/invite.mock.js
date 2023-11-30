@@ -9,16 +9,25 @@ const obj = {
 }
 
 const release = {
+  [`POST ${BASE_URL}/invite/index`]: (req, res) => {
+    console.log('---->', req.params)
+    return res.json({
+      ...obj,
+      data: {
+        link: 'http://t.me/?start=iAzXOz26pE6'
+      },
+    })
+  },
   [`POST ${BASE_URL}/invite/detail`]: (req, res) => {
     console.log('---->', req.params)
     return res.json({
       ...obj,
       data: {
         invites: {
-          today:Mock.mock('@integer(10000, 100000)'),
-          yesterday:Mock.mock('@integer(10000, 100000)'),
-          month:Mock.mock('@integer(10000, 100000)'),
-          total:Mock.mock('@integer(10000, 100000)'),
+          count1:Mock.mock('@integer(10000, 100000)'),
+          count2:Mock.mock('@integer(10000, 100000)'),
+          count3:Mock.mock('@integer(10000, 100000)'),
+          count4:Mock.mock('@integer(10000, 100000)'),
         },
         balance: {
           trc20:Mock.mock('@integer(10000, 100000)'),
@@ -29,11 +38,11 @@ const release = {
     })
   },
   [`POST ${BASE_URL}/invite/withdraw`]: (req, res) => {
-    console.log('---->', req.params)
+    console.log('---->', req.body)
     return res.json({
       ...obj,
-      msg: '余额不足',
-      success: false,
+      // msg: '余额不足',
+      // success: false,
       data: {},
     })
   },

@@ -86,7 +86,7 @@ export const showServerStop = async (ctx: BotContext, msg?: string) => {
 export const apiError = (ctx: BotContext, apiRes: AnyObjetc, onlyCheck?: boolean, msg?: string) => {
   if (!apiRes?.success || apiRes.err != 0) {
     if (!onlyCheck) {
-      showServerStop(ctx, msg ?? ctx.t('httpError'))
+      showServerStop(ctx, msg ?? apiRes?.msg ?? ctx.t('httpError'))
     }
     return true
   }
