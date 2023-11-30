@@ -9,6 +9,14 @@ export const walletAPI = {
       data,
     })
   },
+  /**实时汇率 */
+  getRate: async (data?: {}) => {
+    return await makeRequest<RateRes>({
+      method: 'post',
+      url: '/wallet/rate',
+      data,
+    })
+  },
   /**查询充值信息 */
   depositInfo: async (data: { uid: number; chain: string }) => {
     return await makeRequest<DepositInfo>({
@@ -59,18 +67,33 @@ export const walletAPI = {
     })
   },
   /**查看记录 列表 */
-  historyList: async (data: { key: number; page: number }) => {
-    return await makeRequest<AnyObjetc, 'list'>({
+  historyList: async (data: { item: number; page: number }) => {
+    return await makeRequest<HistoryItem, 'list'>({
       method: 'post',
       url: '/wallet/historyList',
       data,
     })
   },
   /**查看记录 详情 */
-  historyDetail: async (data: { key: number; id: number }) => {
+  historyDetail: async (data: { item: number; id: number }) => {
     return await makeRequest({
       method: 'post',
       url: '/wallet/historyDetail',
+      data,
+    })
+  },
+  /**发红包 */
+  fahongbao: async (data: {
+    uid: number
+    type: string
+    chain: string
+    amount: string
+    user: string
+    split: string
+  }) => {
+    return await makeRequest({
+      method: 'post',
+      url: '/wallet/fahongbao',
       data,
     })
   },
@@ -86,4 +109,21 @@ interface DepositInfo {
 interface BalanceInfo {
   chain: string
   amount: number
+}
+
+interface RateRes {
+  usd_cny: string
+  usd_php: string
+  usd_trc20: string
+  usd_erc20: string
+  usd_bep20: string
+  updated_at: number
+}
+
+interface HistoryItem {
+  id: number
+  chain: string
+  amount: string
+  hbType?: string
+  created_at: number
 }

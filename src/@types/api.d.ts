@@ -4,6 +4,10 @@ declare namespace ApiResult {
     vip: number
     lang: string
     first_name: string
+    /**是否已设置安全密码 */
+    safe_pwd: boolean
+    /**法币单位 */
+    fait_symbol: string
   }
 
   interface WalletIndex {

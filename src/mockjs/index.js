@@ -34,6 +34,8 @@ const proxy = {
         lang: 'cn',
         vip: 5,
         safe_pwd: true,
+        fait_code: 'CNY',
+        fait_symbol: '¥',
       }
     });
   },

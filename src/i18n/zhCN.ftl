@@ -25,6 +25,7 @@ nextPage = 下页 »
 statusSuccess = 成功
 statusFail = 失败
 serverStop = 服务异常，请稍后再试
+httpError = 网络加载异常
 sessionTimeOut = 
     会话已过期
     点击重新打开钱包 /start
@@ -53,14 +54,23 @@ walletHomeMsg =
 
     <b>ERC20 · USDT =</b> <code>{$erc20Balance}</code>
 
-    <b>{$moneySymbol} ≈ </b> <code>{$moneyBalance}</code>
-    <code>(USD:CNY ≈ 1:{$moneyRate})</code>
+    <b>{$fait_code} ≈ </b> <code>{$fait_symbol}{$fait_balance}</code>
 
 transfer = 💸 转账
 hongbao = 🧧 发红包
 withdraw = 🏧 提币
 deposit = 💳 充值
 history = 📑 查看记录
+exchangeRate = 📈 实时汇率
+showRate = 
+    {exchangeRate} ({$updated})
+
+    1 USD ≈   {$usd_cny} CNY 
+    1 USD ≈ {$usd_php} PHP 
+    ------------------------
+    1 USD ≈ {$usd_trc20} TRC20·USDT 
+    1 USD ≈ {$usd_erc20} ERC20·USDT 
+    1 USD ≈ {$usd_bep20} BEP20·USDT 
 ## ============================
 # 钱包充值
 showQrCode = 显示二维码
@@ -188,7 +198,22 @@ detailHistory = 详情记录
 historyMsg = 
     <b>{history}</b>
 
-    查看相关历史记录信息
+    · 查看相关历史记录信息
+
+    <b>👇 请选择操作项:</b>
+historyListMsg = 
+    <b>{history}</b> » { NUMBER($item) ->
+        *[0] {depositHistory}
+        [1] {transferHistory}
+        [2] {withdrawHistory}
+        [3] {hongbaoHistory}
+    }
+
+    · 今日: {$count1}
+    · 昨日: {$count2}
+    · 总计: {$count3}
+
+    · {$pageInfo}
 depositHistoryDetail = 
     {depositHistory} {$time}
     ------------------------
@@ -214,63 +239,38 @@ hongbaoBase =
         [2]
         · 类型: {$name}
         · 币种: {$chain}
+
         [3]
         · 类型: {$name}
         · 币种: {$chain}
         · 金额: {$amount}
+        { NUMBER($type) ->
+            *[0]DELETE_EMPTY_STRING
+            [1]· 专属: {$user}
+            [2]· 拼手气: {$split}
+        }
+
         [4]
         · 类型: {$name}
         · 币种: {$chain}
         · 金额: {$amount}
-    }
-hongbaoInfo = 
-    { NUMBER($type) ->
-        *[0]
-        { NUMBER($step) ->
-            *[1]
-            · 类型: {$name}
-            [10]
-            · 类型: {$name}
-            · 币种: {$chain}
-            [2]
-            · 类型: {$name}
-            · 币种: {$chain}
-            · 金额: {$amount}
+        { NUMBER($type) ->
+            *[0]DELETE_EMPTY_STRING
+            [1]· 专属: {$user}
+            [2]· 拼手气: {$split}
         }
-        [1]
-        { NUMBER($step) ->
-            *[1]
-            · 类型: {$name}
-            [10]
-            · 类型: {$name}
-            · 币种: {$chain}
-            [20]
-            · 类型: {$name}
-            · 币种: {$chain}
-            · 金额: {$amount}
-            [2]
-            · 类型: {$name}
-            · 币种: {$chain}
-            · 金额: {$amount}
-            · 专属: {$user}
-        }
-        [2]
-        { NUMBER($step) ->
-            *[1]
-            · 类型: {$name}
-            [10]
-            · 类型: {$name}
-            · 币种: {$chain}
-            [21]
-            · 类型: {$name}
-            · 币种: {$chain}
-            · 金额: {$amount}
-            [2]
-            · 类型: {$name}
-            · 币种: {$chain}
-            · 金额: {$amount}
-            · 拼手气: {$split}
-        }
+
+        [20]
+        · 类型: {$name}
+        · 币种: {$chain}
+        [21]
+        · 类型: {$name}
+        · 币种: {$chain}
+        · 金额: {$amount}
+        [22]
+        · 类型: {$name}
+        · 币种: {$chain}
+        · 金额: {$amount}
     }
 hongbaoActionMsg = 
     <b>{wallet}</b> » {hongbao}
@@ -283,32 +283,34 @@ hongbaoActionMsg =
 
         <b>👉 请选择发送红包的类型</b>
         [1]
-        {hongbaoInfo}
+        {hongbaoBase}
 
         <b>👇 请选择红包币种</b>
         [2]
-        {hongbaoInfo}
-
-        <b>👉 请确认是否创建红包?</b>
-        [3]
-        {hongbaoInfo}
-
-        ✅ <b>红包创建成功</b>
-        [10]
-        {hongbaoInfo}
+        {hongbaoBase}
 
         <b>👇 请选择红包金额</b>
+        可用余额: {$balance}
+        [3]
+        {hongbaoBase}
 
-        [11]
-        {hongbaoInfo}
+        <b>👉 请确认是否创建红包?</b>
+        [4]
+        {hongbaoBase}
+
+        ✅ <b>红包创建成功</b>
+
+        [20]
+        {hongbaoBase}
 
         <b>👉 请输入红包金额</b>
-        [20]
-        {hongbaoInfo}
+        可用余额: {$balance}
+        [21]
+        {hongbaoBase}
 
         <b>👉 请回复红包专属用户ID</b>
-        [21]
-        {hongbaoInfo}
+        [22]
+        {hongbaoBase}
 
         <b>👉 请回复拼手气红包拆分数量</b>
     }
@@ -404,6 +406,7 @@ backupAddFail =
 
 ## ============================
 # 安全密码
+pinpwdSetAlert = 请先设置安全密码
 pinpwdAdd = ➕ 设置密码
 pinpwdEdit = ✏️ 更改密码
 pinpwdMsg = 

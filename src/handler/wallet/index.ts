@@ -15,17 +15,30 @@ import {
 import { Composer, Filter, FilterQuery, InlineKeyboard } from 'grammy'
 import { format } from 'date-fns'
 import { userAPI } from '@/api/user'
+import { PinpwdView, SettingView } from '../setting'
 
 export const WalletView = async (ctx: BotContext) => {
   const request = ctx.session.request
 
   if (request.homePage) {
+    // 如果未设置安全密码，需要先设置
+    if (!ctx.session?.userinfo?.safe_pwd) {
+      ctx.answerCallbackQuery({
+        text: ctx.t('pinpwdSetAlert'),
+        show_alert: true,
+      })
+      ctx.session.request.views = ['setting', 'pinpwd']
+      return await PinpwdView(ctx)
+    }
+
     restSceneInfo(ctx)
     const btn = new InlineKeyboard()
+
     btn.text(ctx.t('deposit'), '/wallet/deposit')
     btn.text(ctx.t('withdraw'), '/wallet/withdraw').row()
     btn.text(ctx.t('transfer'), '/wallet/transfer')
     btn.text(ctx.t('hongbao'), '/wallet/hongbao').row()
+    btn.text(ctx.t('exchangeRate'), '/wallet/rate')
     btn.text(ctx.t('history'), '/wallet/history').row()
     btn.text(ctx.t('goBack'), '/start?rep=1')
 
@@ -40,12 +53,33 @@ export const WalletView = async (ctx: BotContext) => {
       trc20Balance: api?.data?.trc20 ?? 0,
       bep20Balance: api?.data?.bep20 ?? 0,
       erc20Balance: api?.data?.erc20 ?? 0,
-      moneySymbol: api?.data?.symbol ?? 0,
-      moneyBalance: 1000,
+      fait_code: 'CNY',
+      fait_symbol: '¥',
+      fait_balance: 10000,
       moneyRate: api?.data?.rate ?? 0,
     })
     await display(ctx, msg, btn.inline_keyboard, true)
   } else {
+    if ('rate' === request.views?.[1]) {
+      const api = await walletAPI.getRate()
+      if (apiError(ctx, api)) {
+        return
+      }
+
+      const msg = ctx.t('showRate', {
+        usd_cny: api.data?.usd_cny ?? '',
+        usd_php: api.data?.usd_php ?? '',
+        usd_trc20: api.data?.usd_trc20 ?? '',
+        usd_erc20: api.data?.usd_erc20 ?? '',
+        usd_bep20: api.data?.usd_bep20 ?? '',
+        updated: format(api.data?.updated_at ?? 0, 'MM/dd HH:ii'),
+      })
+
+      return await ctx.answerCallbackQuery({
+        text: msg,
+        show_alert: true,
+      })
+    }
     await views?.[request.views?.[1]]?.(ctx)
   }
 }
@@ -435,77 +469,81 @@ export const WithdrawView = async (ctx: BotContext) => {
 /**历史记录 */
 export const HistoryView = async (ctx: BotContext) => {
   const request = ctx.session.request
-  const titleList = [
-    ctx.t('depositHistory'),
-    ctx.t('transferHistory'),
-    ctx.t('withdrawHistory'),
-    ctx.t('hongbaoHistory'),
-  ]
+  const items = [ctx.t('depositHistory'), ctx.t('transferHistory'), ctx.t('withdrawHistory'), ctx.t('hongbaoHistory')]
 
   const actions: AnyObjetc = {
     index: async () => {
       const btn = new InlineKeyboard()
-      titleList.map((item, index) => {
+      items.map((item, index) => {
         if (index % 2 == 0) {
-          btn.text(item, `/wallet/history?goto=cate&key=${index}`)
+          btn.text(item, `/wallet/history?goto=list&item=${index}`)
         } else {
-          btn.text(item, `/wallet/history?goto=cate&key=${index}`).row()
+          btn.text(item, `/wallet/history?goto=list&item=${index}`).row()
         }
       })
       btn.text(ctx.t('goBack'), '/wallet?rep=1')
 
       await display(ctx, ctx.t('historyMsg'), btn.inline_keyboard, true)
     },
-    cate: async () => {
-      const key = Number(request.params?.key)
+    list: async () => {
+      const item = Number(request.params?.item ?? '')
       const page = request.params?.page || 1
-      const api = await walletAPI.historyList({ key: key, page: page })
-      if (api?.success) {
-        const btn = new InlineKeyboard()
-        api?.data?.rows?.map(item => {
-          const text = `[${item.chain}]: ${item.amount}`
-          btn.text(text, `/wallet/history?goto=detail&key=${key}&id=${item.id}`).row()
-        })
-        pager(ctx, btn, api?.data?.total ?? 0, page, `/wallet/history?goto=cate&key=${key}`)
-        btn.text(ctx.t('goBack'), '/wallet/history')
-
-        const pageInfo = ctx.t('pageInfo', {
-          currPage: page,
-          totalPage: api?.data?.total ?? 0,
-        })
-        const msg = `<b>${titleList[key]}</b>` + `\r\n\r\n` + pageInfo
-
-        await display(ctx, msg, btn.inline_keyboard, true)
-      } else {
-        await ctx.answerCallbackQuery({
-          show_alert: true,
-          text: ctx.t('serverStop'),
-        })
+      const api = await walletAPI.historyList({ item, page })
+      if (apiError(ctx, api)) {
+        return
       }
+
+      const btn = new InlineKeyboard()
+      const typeList = [ctx.t('hongbao1'), ctx.t('hongbao2'), ctx.t('hongbao3')]
+      api?.data?.rows?.map(x => {
+        let showText = ''
+        // 红包
+        if (3 === item) {
+          showText = `⏰${format(x.created_at, 'MM/dd HH:ii')} · ${typeList?.[Number(x?.hbType)]}(💎${x.amount})`
+        } else {
+          showText = `⏰${format(x.created_at, 'MM/dd HH:ii')} · 🔹${x.chain} · 💎${x.amount}`
+        }
+        btn.text(showText, `/wallet/history?goto=detail&item=${item}&id=${x.id}`).row()
+      })
+      pager(ctx, btn, api?.data?.total ?? 0, page, `/wallet/history?goto=list&item=${item}`)
+      btn.text(ctx.t('goBack'), '/wallet/history')
+
+      const pageInfo = ctx.t('pageInfo', {
+        currPage: page,
+        totalPage: api?.data?.total ?? 0,
+      })
+
+      const counts = (api?.data as any)?.counts ?? {}
+      const msg = ctx.t('historyListMsg', {
+        item,
+        count1: counts?.count1 ?? '',
+        count2: counts?.count2 ?? '',
+        count3: counts?.count3 ?? '',
+        pageInfo,
+      })
+
+      await display(ctx, msg, btn.inline_keyboard, true)
     },
     detail: async () => {
-      const key = Number(request.params?.key)
+      const item = Number(request.params?.item ?? '')
       const id = Number(request.params?.id)
-      const apiRes = await walletAPI.historyDetail({ key: key, id: id })
-      if (apiRes?.success) {
-        const time = format(apiRes?.data?.create_at, 'yy/MM/dd HH:ii')
-        const status = [ctx.t('statusFail'), ctx.t('statusSuccess')]
-        const msg = ctx.t('depositHistoryDetail', {
-          time: time,
-          amount: apiRes?.data?.amount,
-          chain: apiRes?.data?.chain,
-          status: status?.[apiRes?.data?.status],
-        })
-        await ctx.answerCallbackQuery({
-          show_alert: true,
-          text: msg,
-        })
-      } else {
-        await ctx.answerCallbackQuery({
-          show_alert: true,
-          text: ctx.t('serverStop'),
-        })
+      const apiRes = await walletAPI.historyDetail({ item, id })
+      if (apiError(ctx, apiRes)) {
+        return
       }
+
+      const time = format(apiRes?.data?.create_at, 'yy/MM/dd HH:ii')
+      const status = [ctx.t('statusFail'), ctx.t('statusSuccess')]
+      const msg = ctx.t('depositHistoryDetail', {
+        time: time,
+        amount: apiRes?.data?.amount,
+        chain: apiRes?.data?.chain,
+        status: status?.[apiRes?.data?.status],
+      })
+      await ctx.answerCallbackQuery({
+        show_alert: true,
+        text: msg,
+      })
     },
   }
 
@@ -515,160 +553,6 @@ export const HistoryView = async (ctx: BotContext) => {
 
 /**发红包 */
 export const HongbaoView = async (ctx: BotContext) => {
-  const request = ctx.session.request
-  const scene = ctx.session.scene
-  const hongbaoList = [ctx.t('hongbaoType1'), ctx.t('hongbaoType2'), ctx.t('hongbaoType3')]
-  const amountList = [5, 10, 20, 50, 100, 200]
-
-  const actions: AnyObjetc = {
-    index: async () => {
-      const btn = new InlineKeyboard()
-      hongbaoList.map((item, index) => {
-        btn.text(item, `/wallet/hongbao?goto=chain&id=${index}`).row()
-      })
-      btn.text(ctx.t('cancel'), '/wallet?rep=1')
-
-      await display(ctx, ctx.t('hongbaoMsg'), btn.inline_keyboard, true)
-    },
-    chain: async () => {
-      const id = request.params?.id
-      const btn = new InlineKeyboard()
-      coinSymbols.map((item, index) => {
-        btn.text(`${item}`, `/wallet/hongbao?goto=amount&id=${id}&coin=${index}`).row()
-      })
-      btn.text(ctx.t('cancel'), '/wallet?rep=1')
-      const msg = ctx.t('hongbaoSelectChain', {
-        type: hongbaoList[id],
-      })
-
-      await display(ctx, msg, btn.inline_keyboard, true)
-    },
-    amount: async () => {
-      const id = request.params?.id
-      const coin = request.params?.coin
-
-      const btn = new InlineKeyboard()
-      amountList.map((amount, index) => {
-        if (index % 3 == 2) {
-          btn.text(`🧧 ${amount}`, `/wallet/hongbao?goto=review&id=${id}&coin=${coin}&amount=${amount}`).row()
-        } else {
-          btn.text(`🧧 ${amount}`, `/wallet/hongbao?goto=review&id=${id}&coin=${coin}&amount=${amount}`)
-        }
-      })
-      btn.text(ctx.t('hongbaoOtherAmount'), `/wallet/hongbao?goto=input&id=${id}&coin=${coin}`)
-      btn.text(ctx.t('cancel'), '/wallet/hongbao?rep=1')
-      const msg = ctx.t('hongbaoSelectAmount', {
-        type: hongbaoList?.[id],
-        chain: coinSymbols?.[coin],
-      })
-      await display(ctx, msg, btn.inline_keyboard, true)
-    },
-    input: async () => {
-      const id = request.params?.id
-      const coin = request.params?.coin
-      ctx.session.scene = {
-        name: 'HongbaoView',
-        router: `/wallet/hongbao?goto=getInput&id=${id}&coin=${coin}&inputType=amount`,
-        createAt: Date.now(),
-        store: new Map(),
-        params: {
-          amount: '',
-        },
-      }
-
-      const btn = new InlineKeyboard()
-      btn.text(ctx.t('cancel'), '/wallet/hongbao?rep=1')
-
-      const msg = ctx.t('hongbaoInputAmount', {
-        type: hongbaoList?.[id],
-        chain: coinSymbols?.[coin],
-      })
-
-      await display(ctx, msg, btn.inline_keyboard, true)
-    },
-    getInput: async () => {
-      if (!checkScene(ctx)) {
-        restSceneInfo(ctx)
-        return await display(ctx, ctx.t('sessionTimeOut'))
-      }
-      const id = request.params?.id
-      const coin = request.params?.coin
-
-      const inputType = request.params?.inputType
-      const message = scene.params?.[inputType]
-      if (inputType == 'amount') {
-        const amount = parseFloat(message)
-        if (Number.isNaN(amount) || amount <= 0) {
-          restSceneInfo(ctx)
-          const btn = new InlineKeyboard()
-          btn.text(ctx.t('goBack'), '/start?rep=1')
-
-          await clearLastMessage(ctx)
-
-          return await display(ctx, ctx.t('invalidAmount'), btn.inline_keyboard)
-        }
-
-        ctx.session.request = {
-          ...ctx.session.request,
-          ...{
-            goto: 'review',
-            params: {
-              id: id,
-              coin: coin,
-              amount: message,
-            },
-          },
-        }
-
-        await clearLastMessage(ctx)
-        await HongbaoView(ctx)
-      }
-    },
-    review: async () => {
-      const id = request.params?.id
-      const coin = request.params?.coin
-      const amount = request.params?.amount
-
-      const btn = new InlineKeyboard()
-      btn.text(ctx.t('confirm'), `/wallet/hongbao?goto=done&id=${id}&coin=${coin}&amount=${amount}`)
-      btn.text(ctx.t('cancel'), '/wallet/hongbao?rep=1')
-
-      const msg = ctx.t('hongbaoReview', {
-        type: hongbaoList?.[id],
-        chain: coinSymbols?.[coin],
-        amount: amount,
-      })
-
-      await display(ctx, msg, btn.inline_keyboard, true)
-    },
-    done: async () => {
-      await ctx.editMessageText(ctx.t('loading'))
-
-      const id = request.params?.id
-      const coin = request.params?.coin
-      const amount = request.params?.amount
-
-      setTimeout(async () => {
-        const btn = new InlineKeyboard()
-        btn.text(ctx.t('goHome'), 'start?rep=1').row()
-        btn.text(ctx.t('wallet'), 'wallet?rep=1')
-
-        const msg = ctx.t('hongbaoSendSuccess', {
-          type: hongbaoList?.[id],
-          chain: coinSymbols?.[coin],
-          amount: amount,
-        })
-
-        await display(ctx, msg, btn.inline_keyboard, true)
-      }, 2000)
-    },
-  }
-
-  // 执行方法
-  await actions?.[request.goto]?.()
-}
-
-export const HongbaoView2 = async (ctx: BotContext) => {
   const request = ctx.session.request
   const scene = ctx.session.scene
   const typeList = [ctx.t('hongbao1'), ctx.t('hongbao2'), ctx.t('hongbao3')]
@@ -718,6 +602,7 @@ export const HongbaoView2 = async (ctx: BotContext) => {
           amount: '',
           user: '',
           split: '',
+          balance: '0',
         },
       }
       const type = request.params?.type ?? ''
@@ -753,6 +638,7 @@ export const HongbaoView2 = async (ctx: BotContext) => {
       if (balance <= 0) {
         return await invalidInput(ctx, ctx.t('hongbaoBalanceFail'))
       }
+      ctx.session.scene.params['balance'] = balance
 
       const btn = new InlineKeyboard()
       amountList.map((amount, index) => {
@@ -770,13 +656,14 @@ export const HongbaoView2 = async (ctx: BotContext) => {
       btn.text(ctx.t('cancel'), '/wallet/hongbao?rep=1')
 
       const msg = ctx.t('hongbaoActionMsg', {
-        step: 10,
+        step: 2,
         type: Number(type),
         name: typeList[type],
         chain: coinSymbols[chain],
         amount: '',
         user: '',
         split: '',
+        balance: balance,
       })
       await display(ctx, msg, btn.inline_keyboard, true)
     },
@@ -788,13 +675,14 @@ export const HongbaoView2 = async (ctx: BotContext) => {
       btn.text(ctx.t('cancel'), `/wallet/hongbao?goto=amount&type=${type}&chain=${chain}`)
 
       const msg = ctx.t('hongbaoActionMsg', {
-        step: 11,
+        step: 20,
         type: Number(type),
         name: typeList[type],
         chain: coinSymbols[chain],
         amount: '',
         user: '',
         split: '',
+        balance: ctx.session.scene.params?.balance ?? '',
       })
       await display(ctx, msg, btn.inline_keyboard, true)
       ctx.session.onMessage = {
@@ -815,7 +703,7 @@ export const HongbaoView2 = async (ctx: BotContext) => {
           ctx.session.request.goto = to
           ctx.session.request.params['rep'] = '0'
           await clearLastMessage(ctx)
-          await HongbaoView2(ctx)
+          await HongbaoView(ctx)
         },
       }
     },
@@ -826,7 +714,7 @@ export const HongbaoView2 = async (ctx: BotContext) => {
       const btn = new InlineKeyboard()
       btn.text(ctx.t('cancel'), '/wallet?rep=1')
       const msg = ctx.t('hongbaoActionMsg', {
-        step: 20,
+        step: 21,
         type: Number(type),
         name: typeList[type],
         chain: coinSymbols[chain],
@@ -857,7 +745,7 @@ export const HongbaoView2 = async (ctx: BotContext) => {
           ctx.session.request.goto = 'review'
           ctx.session.request.params['rep'] = '0'
           await clearLastMessage(ctx)
-          return await HongbaoView2(ctx)
+          return await HongbaoView(ctx)
         },
       }
     },
@@ -868,7 +756,7 @@ export const HongbaoView2 = async (ctx: BotContext) => {
       const btn = new InlineKeyboard()
       btn.text(ctx.t('cancel'), '/wallet?rep=1')
       const msg = ctx.t('hongbaoActionMsg', {
-        step: 21,
+        step: 22,
         type: Number(type),
         name: typeList[type],
         chain: coinSymbols[chain],
@@ -894,7 +782,7 @@ export const HongbaoView2 = async (ctx: BotContext) => {
           ctx.session.request.goto = 'review'
           ctx.session.request.params['rep'] = '0'
           await clearLastMessage(ctx)
-          return await HongbaoView2(ctx)
+          return await HongbaoView(ctx)
         },
       }
     },
@@ -906,8 +794,8 @@ export const HongbaoView2 = async (ctx: BotContext) => {
       const btn = new InlineKeyboard()
       btn.text(ctx.t('confirm'), `/wallet/hongbao?goto=done&type=${type}&chain=${chain}&amount=${amount}`)
       btn.text(ctx.t('cancel'), '/wallet/hongbao?rep=1')
-      const msg = ctx.t('hongbaoActionMsg', {
-        step: 2,
+      let msg = ctx.t('hongbaoActionMsg', {
+        step: 3,
         type: Number(type),
         name: typeList[type],
         chain: coinSymbols[chain],
@@ -915,11 +803,46 @@ export const HongbaoView2 = async (ctx: BotContext) => {
         user: user ?? '',
         split: split ?? '',
       })
+      msg = msg.replace(/DELETE_EMPTY_STRING\n/, '')
 
       const isRep = Number(ctx.session.request.params?.rep ?? '') === 1
       await display(ctx, msg, btn.inline_keyboard, isRep)
     },
-    done: async () => {},
+    done: async () => {
+      await ctx.editMessageText(ctx.t('loading'))
+
+      const { chain, type, user, split } = ctx.session.scene.params
+      const amount = ctx.session.request.params?.amount ?? ctx.session.scene.params?.amount ?? ''
+
+      const api = await walletAPI.fahongbao({
+        uid: ctx.session.userinfo!.id,
+        type,
+        chain,
+        amount,
+        user,
+        split,
+      })
+      if (apiError(ctx, api)) {
+        return
+      }
+
+      restSceneInfo(ctx)
+      ctx.session.onMessage = undefined
+
+      const btn = new InlineKeyboard()
+      btn.text(ctx.t('goBack'), '/wallet?rep=1')
+
+      let msg = ctx.t('hongbaoActionMsg', {
+        step: 4,
+        type: Number(type),
+        name: typeList[type],
+        chain: coinSymbols[chain],
+        amount: amount ?? '',
+        user: user ?? '',
+        split: split ?? '',
+      })
+      await display(ctx, msg, btn.inline_keyboard, true)
+    },
   }
   // 执行方法
   await actions?.[request.goto]?.()
@@ -930,5 +853,5 @@ const views: AnyObjetc = {
   transfer: TransferView,
   withdraw: WithdrawView,
   history: HistoryView,
-  hongbao: HongbaoView2,
+  hongbao: HongbaoView,
 }

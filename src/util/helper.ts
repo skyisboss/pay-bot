@@ -79,11 +79,14 @@ export const showServerStop = async (ctx: BotContext, msg?: string) => {
     return await stopService(ctx, msg)
   }
 }
-/**如api发生异常，则调用 showServerStop*/
+/**
+ * 如api发生异常，则调用 showServerStop
+ * showServerStop先弹出提示，如果弹出不成功则已文本发送
+ */
 export const apiError = (ctx: BotContext, apiRes: AnyObjetc, onlyCheck?: boolean, msg?: string) => {
   if (!apiRes?.success || apiRes.err != 0) {
     if (!onlyCheck) {
-      showServerStop(ctx, msg)
+      showServerStop(ctx, msg ?? ctx.t('httpError'))
     }
     return true
   }
