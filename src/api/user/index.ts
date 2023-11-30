@@ -15,4 +15,11 @@ export const userAPI = {
       data,
     })
   },
+  getConfig: async (data?: {}) => {
+    return await makeRequest<ApiResult.Config>({
+      method: 'post',
+      url: '/config',
+      data,
+    })
+  },
 }

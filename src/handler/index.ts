@@ -1,4 +1,4 @@
-import { clearLastMessage, deleteMessage, parseCallbackQuery, parseRouter } from '@/util/helper'
+import { clearLastMessage, compress, deleteMessage, parseCallbackQuery, parseRouter } from '@/util/helper'
 import { GrammyError, HttpError, InlineKeyboard, InlineQueryResultBuilder } from 'grammy'
 import { StartHome } from './start'
 import { logger } from '@/logger'
@@ -29,7 +29,8 @@ export const useHandler = async (bot: MyBot) => {
   // 监听按钮点击事件
   bot.on('callback_query:data', async ctx => {
     try {
-      const request = parseCallbackQuery(ctx.callbackQuery.data)
+      const request = parseCallbackQuery(compress.decode(ctx.callbackQuery.data))
+      // const request = parseCallbackQuery(ctx.callbackQuery.data)
       logger.debug('监听按钮点击事件', request)
       ctx.session.request = request
 

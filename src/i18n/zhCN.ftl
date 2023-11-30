@@ -364,53 +364,62 @@ hongbaoSendSuccess =
 ## ============================
 # 设置 ￥/CNY
 settingBackup = ⛑️ 备用账户
-settingPinPwd = 🔐 安全密码
+settingPinCode = 🔐 安全密码
 settingLang = 🏁 语言设置
-settingFiat = 💱 本地货币
+settingCurrency = 💱 本地货币
 settingMsg = 
     <b>{setting}</b>
 
     <b>ID:</b> <code>{$uid}</code>
     <b>VIP:</b> {$vip}
     <b>语言:</b> {$lang}
-    <b>法币:</b> {$fiat}
+    <b>法币:</b> {$currency}
 
 ## ============================
 # 备用账户
 backupAdd = ➕ 添加备用账户
 backupEdit = ✏️ 更改备用账户
+backupCopyAssets = 转移资产
 backupMsg = 
     <b>{settingBackup}</b>
 
-    · 若当前账户无法登录时，备用账户可用于转移资产
+    { NUMBER($status) ->
+        *[0] · 若当前账户无法登录时，备用账户可用于转移资产
+        [1] · 备用账户: {$account}
+    }
 
     { NUMBER($status) ->
-        *[0] <b>还未关联备用账户,立即添加</b>
-        [1] <b>已经关联备用账户,点击更改</b>
+        *[0] <b>⚠️ 还未关联备用账户</b>
+        [1] <b>✅ 已经关联备用账户</b>
     }
 
 backupAddMsg = 
-    <b>{settingBackup}</b>
+    <b>{settingBackup}</b> » { NUMBER($action) ->
+        *[0] {backupAdd}
+        [1] {backupEdit}
+    }
 
-    <b>👉 请发送需要关联的备用账户</b>
+    { NUMBER($step) ->
+        *[0]
+        <b>👉 请发送待关联账户的用户名</b>
+        例如: <code>@{bot}</code>
 
-    ⚠️ 例如: <code>https://t.me/pkmp4</code> 或 <code>@pkmp4</code>
-backupAddSuccess = 
-    <b>{settingBackup}</b>
-    
-    ✅ <b>关联成功</b>
-backupAddFail = 
-    <b>{settingBackup}</b>
-    
-    ⚠️ <b>关联失败</b>
+        [1]
+        · 已关联: {$account}
+
+        ✅ <b>关联成功</b>
+    }
+
 
 ## ============================
 # 安全密码
 pinpwdSetAlert = 请先设置安全密码
-pinpwdAdd = ➕ 设置密码
-pinpwdEdit = ✏️ 更改密码
-pinpwdMsg = 
-    <b>{settingPinPwd}</b>
+pinpCodeAdd = 🔐 设置密码
+pinpCodeEdit = ✏️ 更改密码
+pincodeOldFail = 旧密码不正确
+pincodeFail = 安全密码修改失败
+settingPinCodeMsg = 
+    <b>{setting}</b> » {settingPinCode}
 
     · 设置安全密码可有效的保护资产安全
 
@@ -418,15 +427,14 @@ pinpwdMsg =
         *[0] <b>⚠️ 您还未设置安全密码</b>
         [1] <b>✅ 您已经设置安全密码</b>
     }
-pinpwdInputMsg = 
-    <b>{settingPinPwd}</b>
+pincodeInputMsg = 
+    <b>{setting}</b> » {settingPinCode}
 
-    · 设置安全密码可有效的保护资产安全
-
-    { NUMBER($edit) ->
-        *[0] <b>👉 请输入新密码 (6位数字)</b>
-        [1] <b>👉 请输入旧密码 (6位数字)</b>
+    { NUMBER($status) ->
+        *[0] · 请输入新密码 (6位数字)
+        [1] · 请输入旧密码 (6位数字)
     }
+
     { NUMBER($length) ->
         *[0] <code>******</code>
         [1] <code>{$text}*****</code>
@@ -436,25 +444,22 @@ pinpwdInputMsg =
         [5] <code>{$text}*</code>
         [6] <code>{$text}</code>
     }
-pinpwdConfirm = 
-    <b>{settingPinPwd}</b>
+
+pincodeConfirm = 
+    <b>{setting}</b> » {settingPinCode}
 
     · <code>{$text}</code>
 
-    <b>⚠️ 请确认是否使用此密码</b>
-
-pinpwdAddSuccess = 
-    <b>{settingPinPwd}</b>
-    
-    ✅ <b>密码设置成功</b>
-pinpwdAddFail = 
-    <b>{settingPinPwd}</b>
-    
-    ⚠️ <b>密码设置失败</b>   
+    { NUMBER($step) ->
+        *[0] 
+        <b>👉 请确认是否使用此密码</b>
+        [1] 
+        <b>✅ 密码设置成功</b>
+    }  
 
 ## ============================
 # 多语言设置
-langMsg = 
+settinglangMsg = 
     <b>{settingLang}</b>
 
     · 当前显示语言: {$lang}
@@ -462,10 +467,10 @@ langMsg =
     <b>⚠️ 请选择显示语言 👇</b>  
 ## ============================
 # 本地货币
-fiatMsg = 
-    <b>{settingFiat}</b>
+settingCurrencytMsg = 
+    <b>{settingCurrency}</b>
 
-    · 当前显示货币: {$fiat}
+    · 当前显示货币: {$currency}
 
     <b>👇 请选择显示货币</b>  
 

@@ -15,20 +15,20 @@ import {
 import { Composer, Filter, FilterQuery, InlineKeyboard } from 'grammy'
 import { format } from 'date-fns'
 import { userAPI } from '@/api/user'
-import { PinpwdView, SettingView } from '../setting'
+import { PinCodeView, SettingView } from '../setting'
 
 export const WalletView = async (ctx: BotContext) => {
   const request = ctx.session.request
 
   if (request.homePage) {
     // 如果未设置安全密码，需要先设置
-    if (!ctx.session?.userinfo?.safe_pwd) {
+    if (!ctx.session?.userinfo?.pincode) {
       ctx.answerCallbackQuery({
         text: ctx.t('pinpwdSetAlert'),
         show_alert: true,
       })
       ctx.session.request.views = ['setting', 'pinpwd']
-      return await PinpwdView(ctx)
+      return await PinCodeView(ctx)
     }
 
     restSceneInfo(ctx)

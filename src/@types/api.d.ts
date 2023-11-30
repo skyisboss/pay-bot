@@ -5,9 +5,10 @@ declare namespace ApiResult {
     lang: string
     first_name: string
     /**是否已设置安全密码 */
-    safe_pwd: boolean
+    pincode: boolean
     /**法币单位 */
     fait_symbol: string
+    currency: string
   }
 
   interface WalletIndex {
@@ -16,5 +17,23 @@ declare namespace ApiResult {
     bep20: number
     rate: number
     symbol: string
+  }
+
+  interface Config {
+    lang: {
+      code: string
+      lang: string
+    }[]
+    blockchain: {
+      chain: string
+      token: string
+      symbol: string
+    }[]
+    currency: {
+      code: string
+      symbol: string
+    }[]
+    hongbao: string[]
+    updated_at: number
   }
 }

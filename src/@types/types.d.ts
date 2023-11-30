@@ -79,6 +79,9 @@ interface BotSession {
     /**回调方法 */
     call: (ctx: BotContext) => Promise<void>
   }
+
+  /**配置信息 */
+  config?: ApiResult.Config
 }
 
 /**解析后的按钮请求 callback_query */

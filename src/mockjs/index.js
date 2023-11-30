@@ -34,11 +34,54 @@ const proxy = {
         lang: 'cn',
         vip: 5,
         safe_pwd: true,
-        fait_code: 'CNY',
-        fait_symbol: '¥',
+        currency: 'CNY',
       }
     });
   },
+  [`POST /api/config`]: (req, res) => {
+    console.log('---->', req.body)
+    return res.json({
+      err: 0,
+      msg: '',
+      success: true,
+      data: {
+        lang: [
+          // {code: 'en', lang: 'English'},
+          {code: 'cn', lang: '简体中文'},
+        ],
+        // lang: ['简体中文'],
+        blockchain: [
+          {
+            chain: 'tron',
+            token: 'trc20',
+            symbol: 'usdt',
+          },
+          {
+            chain: 'bsc',
+            token: 'bep20',
+            symbol: 'usdt',
+          },
+          {
+            chain: 'eth',
+            token: 'erc20',
+            symbol: 'usdt',
+          },
+        ],
+        // currency: {
+        //   code: ['USD', 'CNY', 'PHP'],
+        //   symbol: ['$', '￥', '₱'],
+        // },
+        currency: [
+          {code: 'USD', symbol: '$'},
+          {code: 'CNY', symbol: '￥'},
+          {code: 'PHP', symbol: '₱'},
+        ],
+        hongbao: ['hongbao1','hongbao2','hongbao3'],
+        update_at: Date.now(),
+      },
+    });
+  },
+
   [`POST /api/pwd/check`]: (req, res) => {
     console.log('---->', req.body)
     return res.json({
