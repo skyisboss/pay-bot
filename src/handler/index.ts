@@ -6,16 +6,16 @@ import { WalletView } from './wallet'
 import { MyBot, BotContext, AnyObjetc, SceneInfo, CallbackRequest } from '@/@types/types'
 import { SettingView } from './setting'
 import { PaymentView } from './payment'
-import { StoreView } from './store'
 import { SecuredView } from './secured'
 import { InviteView } from './invite'
+import { VendingView } from './vending'
 
 const ViewsObject: AnyObjetc = {
   start: StartHome,
   wallet: WalletView,
   setting: SettingView,
   payment: PaymentView,
-  store: StoreView,
+  vending: VendingView,
   secured: SecuredView,
   invite: InviteView,
 }

@@ -285,6 +285,16 @@ export const SessionVersion = (ctx: BotContext, version = 1) => {
   return ctx.session.version
 }
 
+/**输入验证不通过的无效数据，返回信息提示 */
+export const invalidInput = async (ctx: BotContext, backRouter: string, msg?: string) => {
+  restSceneInfo(ctx)
+  const btn = new InlineKeyboard()
+  btn.text(ctx.t('goBack'), backRouter)
+
+  await clearLastMessage(ctx)
+  return await display(ctx, msg ?? ctx.t('invalidInput'), btn.inline_keyboard)
+}
+
 /**字符串加密压缩*/
 export const compress = {
   /**加密 */

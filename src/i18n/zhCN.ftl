@@ -34,7 +34,8 @@ invalidInput = 无效的输入消息
 wallet = 💰 我的钱包
 payment = 🎛️ 商户集成
 secured = 🛡️ 担保交易
-store = 🏪 自助销售
+store = 🏪 自动售卖
+vending = 🏪 自动售卖2
 invite = 🎁 邀好友 赚佣金
 setting = ⚙️ 设置
 homeWelcome =
@@ -603,125 +604,123 @@ paymentDetailMoreMsg =
     状态: {$status}
 
 ## ============================
-# store 自动发卡
-storeGoodsAdd = 发布商品
-storeGoodsView = 管理商品
-storeGoodsEdit = 编辑商品
-storeGoodsDelete = 删除商品
-storeGoodsDeleteSuccess = ✅ 删除成功
-storeGoodsDeleteFail = ⚠️ 删除失败    
-storeGoodsAddSuccess = ✅ 成功   
-storeGoodsAddFail = ⚠️ 删除   
-storeSetting = 店铺设置
-storeSetName = 设置名称
-storeSetTimeout = 付款超时
-storeHomeMsg =
-    <b>{store}</b> 
+# vending 自动售卖
+vendingPublish = 发布商品
+vendingEdit = 编辑商品
+vendingDelete = 删除商品
+vendingManage = 管理商品
+vendingSetting = 店铺设置
+vendingSettingName = 店铺名称
+vendingSettingStatus= 店铺状态
+vendingSettingSuccess = ✅ 操作成功 
+vendingHomeMsg = 
+    <b>{vending}</b> { NUMBER($status) ->
+        *[0] [{vendingStatusClose}]
+        [1] [{vendingStatusOpen}]
+    }
 
-    <b>· 商品数量: </b> <code>0</code>
-    <b>· 成交数量: </b> <code>0</code>
-
-    <b>· 成交金额</b>
+    <b>· 商品数量: </b> <code>{$count1}</code>
+    <b>· 成交数量: </b> <code>{$count2}</code>
+    <b>· 成交金额: </b>
        <code>TRC20 · USDT: {$trc20}</code>
        <code>BEP20 · USDT: {$bep20}</code>
        <code>ERC20 · USDT: {$erc20}</code>
 
     👇 店铺链接(点击可复制)
     <code>{$link}</code>
-storeSettingMsg =
-    <b>{store}</b> · {storeSetting}
 
-    · 设置名称: 未设置
-    · 付款超时: 未设置
-
-    <b>👇 请选择设置项</b> 
-
-storeSettingItemMsg =
-    <b>{store}</b> · {storeSetting}
+vendingManageMsg = 
+    <b>{vending}</b> » {vendingManage}
 
     { NUMBER($index) ->
-        *[1] · {storeSetName}
-        [2] · {storeSetTimeout}
-    }
-
-    { NUMBER($index) ->
-        *[1] <b>👉 请回复店铺名称</b>
-        [2] <b>👉 请回复付款超时时间(仅数字)</b>
-    }   
-
-storeGoodsViewMsg = 
-    <b>{store}</b> · {storeGoodsView}
-
-    { NUMBER($index) ->
-        *[0] · (未设置店铺名称)
+        *[0] · (店铺名称未设置)
         [1] · {$name}
     }
+# 🟢 正常 🔴 关闭
+vendingStatusOpen = 🟢 营业中
+vendingStatusClose = 🔴 休息中
+vendingSettingMsg =
+    <b>{vending}</b> » {vendingSetting}
 
-storeGoodsDetailMsg = 
-    <b>{store}</b> · {storeGoodsView}
+    { NUMBER($step) ->
+        *[0]
+        · 店铺名称: (未设置)
+        · 店铺状态: {vendingStatusOpen}
 
-    · 成交量: <b>0</b>
+        <b>👇 请选择设置项</b> 
+        [1]
+        · 设置名称
 
-    商品标题:
-       <b>TRC20</b>
-
-    商品售价:
-       <b>TRC20</b>
-
-    商品描述:
-       <b>TRC20</b>
-
-    商品内容:
-       <b>TRC20</b>
-
-storeGoodsDeleteConfirm = 
-    <b>{store}</b> · {storeGoodsView}
-
-    {$title}
-
-    <b>👉 确定删除此商品吗？</b>
-storeGoodsAddMsg =
-    <b>👇 商品添加格式(点击可复制)</b>
-
-    <code>标题=[填写商品标题]
-    价格=[填写商品价格]
-    描述=[填写商品描述]
-    卡密=[填写商品卡密]</code>
-
-    <b>👉 复制添加格式，编辑正确信息后发送回复</b>
-    · 将文本“[...]”里文本替换为正确内容
-    · <b>卡密</b>是用户付款后显示的内容
-    · 以上内容不得为空，内容暂不支持换行
-
-storeGoodsEditMsg =
-    <b>👇 商品信息(点击可复制)</b>
-
-    <code>标题=[{$title}]
-    价格=[{$price}]
-    描述=[{$desc}]
-    卡密=[{$kami}]</code>
-
-    <b>👉 复制商品信息，编辑正确信息后发送回复</b>
-
-storeGoodsReviewMsg = 
-    <b>{store}</b> · { NUMBER($type) ->
-        *[0] {storeGoodsAdd}
-        [1] {storeGoodsEdit}
+        <b>👉 请回复店铺名称</b> 
     }
 
-    (标题:) <b>{$title}</b>
-
-    (售价:) <b>{$price}</b>
-
-    (描述:) <b>{$desc}</b>
-
-    (卡密:) <b>{$kami}</b>
-
-    { NUMBER($type) ->
-        *[0] <b>👉 确定要发布商品吗？</b>
-        [1] <b>👉 确定要编辑商品吗？</b>
+vendingTextTitle = 标题
+vendingTextPrice = 价格
+vendingTextDesc = 描述
+vendingTextKami = 内容
+vendingPriceFail = 价格错误
+vendingGoodsMsg =
+    <b>{vending}</b> » { NUMBER($action) ->
+        *[0] {vendingPublish}
+        [1] {vendingEdit}
     }
 
+    { NUMBER($step) ->
+        *[0]
+        <code>{vendingTextTitle}=[填写商品标题]
+        {vendingTextPrice}=[填写商品价格]
+        {vendingTextDesc}=[填写商品描述]
+        {vendingTextKami}=[付款后显示内容]</code>
+
+        <b>👆 复制以上格式，编辑正确信息后发送回复</b>
+        · 将文本“[...]”里文本替换为正确内容
+
+        [1]
+        <code>{vendingTextTitle}=[{$title}]
+        {vendingTextPrice}=[{$price}]
+        {vendingTextDesc}=[{$desc}]
+        {vendingTextKami}=[{$kami}]</code>
+
+        <b>👆 复制以上格式，编辑正确信息后发送回复</b>
+        · 将文本“[...]”里文本替换为正确内容
+
+        [2]
+        ({vendingTextTitle}:) <b>{$title}</b>
+
+        ({vendingTextPrice}:) <b>{$price}</b>
+
+        ({vendingTextDesc}:) <b>{$desc}</b>
+
+        ({vendingTextKami}:) <b>{$kami}</b>
+
+        { NUMBER($action) ->
+            *[0] <b>👉 确定要发布商品吗？</b>
+            [1] <b>👉 确定要编辑商品吗？</b>
+        }
+    }
+vendingGoodsDetailMsg = 
+    <b>{vending}</b> » {vendingManage}
+
+    · <b>已售: </b>{$sales}
+    · <b>浏览: </b>{$views}
+
+    <b>{vendingTextTitle}:</b> {$title}
+    <b>{vendingTextPrice}:</b> {$price}
+    <b>{vendingTextDesc}:</b> {$desc}
+    <b>{vendingTextKami}:</b> {$kami}
+
+    发布时间: {$time}
+
+vendingGoodsDeleteMsg = 
+    <b>{vending}</b> » {vendingManage}
+
+    · {$title}
+
+    { NUMBER($step) ->
+        *[0] <b>👉 确定删除此商品吗？</b>
+        [1] <b>✅ 删除成功</b>
+    }
+    
 ## ============================
 # secured = 🛡️ 担保交易
 securedAdd = 创建
