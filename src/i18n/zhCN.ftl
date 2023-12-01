@@ -34,7 +34,7 @@ invalidInput = 无效的输入消息
 wallet = 💰 我的钱包
 payment = 🎛️ 商户集成
 secured = 🛡️ 担保交易
-store = 🔰  自动发卡
+store = 🏪 自助销售
 invite = 🎁 邀好友 赚佣金
 setting = ⚙️ 设置
 homeWelcome =
@@ -516,24 +516,27 @@ paymentNew = 开通支付应用
 paymentManage = 管理支付应用
 paymentDocument = 使用文档
 paymentCreateSuccess = 
-    <b>{payment}</b> 
+    <b>{payment}</b> » {paymentNew}
     
     · 创建集成支付
 
     ✅ 创建成功
 paymentMsg = 
-    <b>{payment}</b> · <a href="https://grammy.dev/">了解更多 ›</a>
+    <b>{payment}</b> · <a href="https://google.com/">了解更多 ›</a>
 
     · 为商家提供安全、快速、匿名的在线支付系统
     · 各种机器人系统和网站插件、现有系统轻松整合
     · 集成到你的服务中，使用数字货币支付秒到账
+    · <a href="https://google.com/">查看Web插件、机器人</a>
 
     余额转出费用3%，其他任何操作 0 费用
 
 paymentAppMsg = 
-    <b>{payment}</b> 
+    <b>{payment}</b> » {paymentManage}
 
-    <b>· 今日收款: {$today}</b>
+    <b>· 今日收款: </b>{$count1}
+    <b>· 昨日收款: </b>{$count2}
+    <b>· 全部收款: </b>{$count3}
 
     <b>· 当前余额: </b>
        TRC20 · USDT: {$trc20}
@@ -544,8 +547,8 @@ paymentAppMsg =
     <code>{$link}</code>
 
 paymentAppToken = 支付密钥
-paymentAppTokenReload = 🔄 更换密钥
-paymentAppTokenReloadOK = 更换密钥成功
+paymentAppTokenReset = 🔄 更换密钥
+paymentAppTokenResetOK = 更换密钥成功
 paymentAppHook = 回调通知
 paymentAppHookAdd = 设置回调地址
 paymentAppHookEdit = 修改回调地址
@@ -553,38 +556,51 @@ paymentAppWithdraw = 提取余额
 paymentAppDetail = 详细记录
 paymentDetailIn = 收入记录
 paymentDetailOut = 提取记录
-paymentAppWithdrawSuccess = 提取成功，余额已转入钱包
+paymentAppWithdrawSuccess = 提取成功，余额将转入钱包
 paymentAppWithdrawFail = 提取失败，余额不足
-
 paymentTokenMsg = 
-    <b>{payment}</b> · {paymentAppToken}
+    <b>{payment}</b> » {paymentAppToken}
 
+    (👇 点击可复制密钥)
     <code>{$token}</code>
 
     <b>⚠️ 密钥用于操作支付权限, 请妥善保管</b>
 paymentHookMsg = 
-    <b>{payment}</b> · {paymentAppHook}
+    <b>{payment}</b> » {paymentAppHook}
 
-    · 设置您的支付回调通知网址
-    · 收到付款时系统向回调地址发送相关通知
-
-    { NUMBER($index) ->
-        *[0] 👉 <b>通知地址: 未设置</b>
-        [1] 👉 <b>通知地址:</b> <code>{$webhook}</code>
+    { NUMBER($step) ->
+        *[0]
+        · 设置您的支付回调通知网址
+        · 新付款时发送相关通知到该网址
+        
+        { NUMBER($hookStatus) ->
+            *[0]<b>⚠️ 通知地址:</b> 未设置
+            [1]<b>✅ 通知地址:</b> <code>{$hook}</code>
+        }
+        [1]
+        <b>👉 请发送回调通知网址</b>
+        例如: <code>https://telegram.org</code>
     }
-paymentHookInput = 
-    <b>{payment}</b> · {paymentAppHook}
+paymentDetailMsg = 
+    <b>{payment}</b> » {paymentAppDetail}
 
-    <b>👉 请发送回调通知网址</b>
-    例如: <code>https://telegram.org</code>
-
-paymentAppDetailMsg = 
-    <b>{payment}</b> · {paymentAppDetail}
-
-    { NUMBER($index) ->
-        *[0] <b>👇 请选择查看方式</b>
-        [1] 当前第 1 页, 共 3 页, 100 项记录
+    { NUMBER($category) ->
+        *[0] <b>👇 请选择查看项目</b>
+        [1] · <b>{paymentDetailIn}</b>
+        [2] · <b>{paymentDetailOut}</b>
     }
+
+paymentDetailMoreMsg = 
+    { NUMBER($category) ->
+        *[1] {paymentDetailIn} {$time}
+        [2] {paymentDetailOut} {$time}
+    }
+
+    {$chain}
+    ------------------------
+    金额: {$amount}
+    ------------------------
+    状态: {$status}
 
 ## ============================
 # store 自动发卡
@@ -730,7 +746,7 @@ securedAgreementMsg =
     <b>⚠️ 当您创建或参与担保交易，即表示您同意《{securedAgreement}》</b>
 
 securedMsg = 
-    <b>{secured}</b> · <a href="https://grammy.dev/">了解更多 ›</a>
+    <b>{secured}</b> · <a href="https://google.com/">了解更多 ›</a>
 
     · 基于双向担保管理资金和流程
     · 安全可靠解决交易的信任基础

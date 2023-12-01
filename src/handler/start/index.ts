@@ -8,8 +8,8 @@ export const StartHome = async (ctx: BotContext) => {
 
   const btn = new InlineKeyboard()
   btn.text(ctx.t('wallet'), '/wallet')
-  btn.text(ctx.t('payment'), '/payment').row()
-  btn.text(ctx.t('secured'), '/secured')
+  btn.text(ctx.t('secured'), '/secured').row()
+  btn.text(ctx.t('payment'), '/payment')
   btn.text(ctx.t('store'), '/store').row()
   btn.text(ctx.t('invite'), '/invite').row()
   btn.text(ctx.t('setting'), '/setting')

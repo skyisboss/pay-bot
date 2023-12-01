@@ -33,7 +33,7 @@ const proxy = {
         first_name: 'fox',
         lang: 'cn',
         vip: 5,
-        safe_pwd: true,
+        pincode: true,
         currency: 'CNY',
       }
     });

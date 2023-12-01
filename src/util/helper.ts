@@ -264,6 +264,27 @@ export const pincode = (ctx: BotContext, params?: AnyObjetc) => {
   return { msg, buttons }
 }
 
+/**解析币种 */
+export const getChainSymbol = (ctx: BotContext, token: string) => {
+  const blockchain = ctx.session.config?.blockchain ?? []
+  const chain = blockchain.find(x => x.token === token)
+  if (chain === undefined) {
+    return
+  }
+  return `${token.toUpperCase()} · ${chain?.symbol?.toUpperCase()}`
+}
+
+/**设置session版本, 默认累计+1 */
+export const SessionVersion = (ctx: BotContext, version = 1) => {
+  if (version <= 0) {
+    ctx.session.version = 0
+  } else {
+    ctx.session.version += version
+  }
+
+  return ctx.session.version
+}
+
 /**字符串加密压缩*/
 export const compress = {
   /**加密 */

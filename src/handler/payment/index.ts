@@ -1,8 +1,19 @@
 import { AnyObjetc, BotContext } from '@/@types/types'
 import { paymentAPI } from '@/api/payment'
-import { checkScene, clearLastMessage, display, restSceneInfo, showServerStop } from '@/util/helper'
-import { InlineKeyboard, InlineQueryResultBuilder } from 'grammy'
-import { WithdrawView } from '../wallet'
+import {
+  apiError,
+  checkScene,
+  clearLastMessage,
+  display,
+  getChainSymbol,
+  pager,
+  restSceneInfo,
+  SessionVersion,
+  showServerStop,
+} from '@/util/helper'
+import { InlineKeyboard } from 'grammy'
+import { coinSymbols } from '../wallet'
+import { format } from 'date-fns'
 
 export const PaymentView = async (ctx: BotContext) => {
   const request = ctx.session.request
@@ -10,23 +21,18 @@ export const PaymentView = async (ctx: BotContext) => {
   if (request.homePage) {
     restSceneInfo(ctx)
 
-    let apiRes
-    try {
-      apiRes = await paymentAPI.index({ uid: ctx.session.userinfo!.id })
-      if (!apiRes.success || !apiRes?.data) {
-        return await showServerStop(ctx)
-      }
-    } catch (error) {
-      return await showServerStop(ctx)
+    const api = await paymentAPI.index({ uid: ctx.session.userinfo!.id })
+    if (apiError(ctx, api)) {
+      return
     }
 
     const btn = new InlineKeyboard()
-    if (apiRes.data?.created) {
+    if (api.data?.id) {
       btn.text(ctx.t('paymentManage'), '/payment/manage?goto=index').row()
     } else {
       btn.text(ctx.t('paymentNew'), '/payment/manage?goto=create').row()
     }
-    btn.url(ctx.t('paymentDocument'), 'https://grammy.dev/').row()
+    btn.url(ctx.t('paymentDocument'), 'https://google.com/').row()
     btn.text(ctx.t('goBack'), '/start?rep=1')
 
     await display(ctx, ctx.t('paymentMsg'), btn.inline_keyboard, true)
@@ -48,11 +54,20 @@ const ManageView = async (ctx: BotContext) => {
       btn.text(ctx.t('paymentAppWithdraw'), '/payment/manage?goto=withdraw').row()
       btn.text(ctx.t('goBack'), '/payment')
 
+      const api = await paymentAPI.index({ uid: ctx.session.userinfo!.id })
+      if (apiError(ctx, api)) {
+        return
+      }
+
+      const count = api.data?.count
+      const balance = api.data?.balance
       const msg = ctx.t('paymentAppMsg', {
-        today: 0,
-        trc20: 0,
-        bep20: 0,
-        erc20: 0,
+        count1: count?.count1 ?? 0,
+        count2: count?.count2 ?? 0,
+        count3: count?.count3 ?? 0,
+        trc20: balance?.trc20 ?? 0,
+        bep20: balance?.bep20 ?? 0,
+        erc20: balance?.erc20 ?? 0,
         link: 't.me/Bot?start=IV71Q3VixUr7',
       })
 
@@ -60,109 +75,171 @@ const ManageView = async (ctx: BotContext) => {
     },
     create: async () => {
       await ctx.editMessageText(ctx.t('loading'))
+
+      const api = await paymentAPI.create({ uid: ctx.session.userinfo!.id })
+      if (apiError(ctx, api)) {
+        return
+      }
+
       const btn = new InlineKeyboard()
       btn.text(ctx.t('paymentManage'), '/payment/manage?goto=index')
       btn.text(ctx.t('goBack'), '/payment')
-
-      setTimeout(async () => {
-        await display(ctx, ctx.t('paymentCreateSuccess'), btn.inline_keyboard, true)
-      }, 1000)
+      await display(ctx, ctx.t('paymentCreateSuccess'), btn.inline_keyboard, true)
     },
     token: async () => {
       const btn = new InlineKeyboard()
-      btn.text(ctx.t('paymentAppTokenReload'), '/payment/manage?goto=token&reload=1')
+      btn.text(ctx.t('paymentAppTokenReset'), '/payment/manage?goto=token&reset=1')
       btn.text(ctx.t('goBack'), '/payment/manage')
 
-      if (request.params?.reload) {
+      const reset = request.params?.reset
+      const api = await paymentAPI.token({ uid: ctx.session.userinfo!.id, reset })
+      if (apiError(ctx, api)) {
+        return
+      }
+
+      if (reset) {
         await ctx.answerCallbackQuery({
-          text: ctx.t('paymentAppTokenReloadOK'),
+          text: ctx.t('paymentAppTokenResetOK'),
           show_alert: true,
         })
       }
 
       const msg = ctx.t('paymentTokenMsg', {
-        token: '46299:AACsE5fTREoQNCxOsLQ4ZsJsDZBOJiV8n068855',
+        token: api.data?.token ?? '',
       })
-
       await display(ctx, msg, btn.inline_keyboard, true)
     },
     hook: async () => {
+      // todo 调整回调逻辑
       const btn = new InlineKeyboard()
-      const setHook = request.params?.setHook ?? ''
-      if (setHook) {
-        ctx.session.scene = {
-          name: 'ManageView',
-          router: '/payment/manage?goto=getInput&inputType=webhook',
-          createAt: Date.now(),
-          store: new Map(),
-          params: {
-            webhook: '',
+      const rep = Number(request.params?.rep ?? '1')
+      const step = request.params?.step ?? ''
+      if (step) {
+        const msg = ctx.t('paymentHookMsg', {
+          step: 1,
+          hook: '',
+          hookStatus: 0,
+        })
+        btn.text(ctx.t('cancel'), '/payment/manage')
+        await display(ctx, msg, btn.inline_keyboard, true)
+        ctx.session.onMessage = {
+          name: 'input-hook',
+          time: Date.now(),
+          call: async ctx => {
+            const message = (ctx.message?.text ?? '').trim()
+            if (message) {
+              try {
+                new URL(message)
+              } catch (err) {
+                const btn = new InlineKeyboard()
+                btn.text(ctx.t('goBack'), '/payment/manage')
+                await clearLastMessage(ctx)
+                return await display(ctx, ctx.t('invalidInput'), btn.inline_keyboard)
+              }
+            }
+            const api = await paymentAPI.hook({ uid: ctx.session.userinfo!.id, hook: message })
+            if (apiError(ctx, api)) {
+              return
+            }
+
+            ctx.session.request.goto = 'hook'
+            ctx.session.request.params['rep'] = 0
+            ctx.session.request.params['step'] = 0
+            await clearLastMessage(ctx)
+            await ManageView(ctx)
           },
         }
-        btn.text(ctx.t('cancel'), '/payment/manage')
-
-        await display(ctx, ctx.t('paymentHookInput'), btn.inline_keyboard, true)
       } else {
-        const webhook = request.params?.webhook ?? ''
-
-        btn
-          .text(ctx.t(webhook ? 'paymentAppHookEdit' : 'paymentAppHookAdd'), '/payment/manage?goto=hook&setHook=1')
-          .row()
-        btn.text(ctx.t('goBack'), '/payment/manage')
-
-        const msg = ctx.t('paymentHookMsg', {
-          index: webhook ? 1 : 0,
-          webhook: webhook,
-        })
-
-        await display(ctx, msg, btn.inline_keyboard, !webhook && !setHook ? true : false)
-        if (webhook) {
-          restSceneInfo(ctx)
+        ctx.session.onMessage = undefined
+        const api = await paymentAPI.hook({ uid: ctx.session.userinfo!.id })
+        if (apiError(ctx, api)) {
+          return
         }
+        const webhook = api.data?.hook ?? ''
+        const text = ctx.t(webhook ? 'paymentAppHookEdit' : 'paymentAppHookAdd')
+        btn.text(text, '/payment/manage?goto=hook&step=1').row()
+        btn.text(ctx.t('goBack'), '/payment/manage')
+        const msg = ctx.t('paymentHookMsg', {
+          step: 0,
+          hook: webhook,
+          hookStatus: webhook ? 1 : 0,
+        })
+        await display(ctx, msg, btn.inline_keyboard, !!rep)
       }
+    },
+    more: async () => {
+      const itemId = request.params?.id ?? ''
+      const api = await paymentAPI.detail({
+        uid: ctx.session.userinfo!.id,
+        id: Number(itemId),
+      })
+      if (apiError(ctx, api)) {
+        return
+      }
+
+      const chain = getChainSymbol(ctx, api.data?.chain ?? '')
+      const status = ['🕘 wait', '🟢 ok', '🔴 error'] //🟡
+      const msg = ctx.t('paymentDetailMoreMsg', {
+        time: format(api.data?.created_at ?? 0, 'MM/dd HH:ii'),
+        amount: api.data?.amount ?? 0,
+        chain: chain ?? '',
+        status: status?.[api.data?.status ?? 0],
+        category: Number(api.data?.category ?? ''),
+      })
+      await ctx.answerCallbackQuery({
+        show_alert: true,
+        text: msg,
+      })
     },
     detail: async () => {
-      const currSelect = Number(request.params?.cate ?? 0)
-      const lastSelect = Number(request.params?.last ?? 0)
-      if (lastSelect && lastSelect === currSelect) {
-        return ctx.answerCallbackQuery()
-      }
-      const detailInText = ctx.t('paymentDetailIn') + `${currSelect === 1 ? ' ◉' : ' ○'}`
-      const detailOutText = ctx.t('paymentDetailOut') + `${currSelect === 2 ? ' ◉' : ' ○'}`
+      const page = Number(request.params?.page ?? 1)
+      const category = request.params?.cate ?? ''
+
       const btn = new InlineKeyboard()
-      btn.text(detailInText, `/payment/manage?goto=detail&cate=1&last=${currSelect}`)
-      btn.text(detailOutText, `/payment/manage?goto=detail&cate=2&last=${currSelect}`).row()
+      const detailInText = ctx.t('paymentDetailIn') + `${Number(category) === 1 ? ' ◉' : ' ○'}`
+      const detailOutText = ctx.t('paymentDetailOut') + `${Number(category) === 2 ? ' ◉' : ' ○'}`
+      const version = SessionVersion(ctx)
+      btn.text(detailInText, `/payment/manage?goto=detail&cate=1&page=1&v=${version}`)
+      btn.text(detailOutText, `/payment/manage?goto=detail&cate=2&page=1&v=${version}`).row()
 
-      let msg = ctx.t('paymentAppDetailMsg', {
-        index: currSelect > 0 ? 1 : 0,
-      })
-      // 构建详细记录
-      if (currSelect) {
-        const page = `\r\n当前第 1 页, 共 3 页, 100 项记录`
-        // msg += page
+      let pageInfo = ''
+      if (category) {
+        const api = await paymentAPI.category({
+          uid: ctx.session.userinfo!.id,
+          page,
+          cate: Number(category),
+        })
+        if (apiError(ctx, api)) {
+          return
+        }
+        const rows = api.data?.rows ?? []
+        rows.map(x => {
+          const time = format(x?.created_at ?? 0, 'MM/dd HH:ii')
+          const chain = getChainSymbol(ctx, x?.chain ?? '')
+          const title = `${time} | ${chain ?? '-'} | ${x.amount}`
+          btn.text(title, `/payment/manage?goto=more&id=${x.id}`).row()
+        })
+        pager(ctx, btn, api?.data?.total ?? 0, page, `/payment/manage?goto=detail&cate=${category}`)
+        pageInfo = ctx.t('pageInfo', {
+          currPage: page,
+          totalPage: api?.data?.total ?? 0,
+        })
       }
 
+      const msg = ctx.t('paymentDetailMsg', {
+        category: Number(category),
+      })
       btn.text(ctx.t('goBack'), '/payment/manage')
-      await display(ctx, msg, btn.inline_keyboard, true)
+      await display(ctx, msg + `\r\n\r\n` + pageInfo, btn.inline_keyboard, true)
     },
     withdraw: async () => {
+      const api = await paymentAPI.withdraw({ uid: ctx.session.userinfo!.id })
+      console.log(api)
+
+      if (apiError(ctx, api)) {
+        return
+      }
       return await showServerStop(ctx, ctx.t('paymentAppWithdrawSuccess'))
-    },
-    getInput: async () => {
-      if (!checkScene(ctx)) {
-        restSceneInfo(ctx)
-        return await display(ctx, ctx.t('sessionTimeOut'))
-      }
-
-      const inputType = request.params?.inputType
-      const message = scene.params?.[inputType]
-
-      if (inputType == 'webhook') {
-        ctx.session.request.goto = 'hook'
-        ctx.session.request.params = { webhook: message }
-        await clearLastMessage(ctx)
-        await ManageView(ctx)
-      }
     },
   }
 

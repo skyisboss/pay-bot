@@ -31,6 +31,7 @@ const initial = () => {
     onMessage: undefined,
     scenes: undefined,
     config: undefined,
+    version: 0,
   } as BotSession
 }
 export const initSession = () => {

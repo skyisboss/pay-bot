@@ -17,7 +17,7 @@ export const StoreView = async (ctx: BotContext) => {
       trc20: '0.00',
       bep20: '0.00',
       erc20: '0.00',
-      link: 'https://grammy.dev',
+      link: 'https://google.com',
     })
 
     await display(ctx, msg, btn.inline_keyboard, true)

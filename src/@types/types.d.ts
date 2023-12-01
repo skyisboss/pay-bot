@@ -32,6 +32,12 @@ type MyBot = Bot<BotContext>
 
 /**session */
 interface BotSession {
+  /**
+   * 数据版本 该值默认为0
+   * 如果需要使用则需要将其累计+1后再使用 ctx.session.version += 1
+   * 这样就不会出现错误Bad Request: message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message
+   */
+  version: number
   /**临时存储 */
   store: AnyObjetc
   /**
