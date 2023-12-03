@@ -19,7 +19,7 @@ const release = {
         rows: new Array(5).fill('').map( (item, index) => { 
           return {
             id: index + 1,
-            chain: Mock.mock('@pick([0,1,2])'),
+            chain: Mock.mock('@pick(["trc20","bep20","erc20"])'),
             amount: Mock.mock('@integer(10000, 100000)'),
             status: Mock.mock('@pick([0,1])'),
           } 

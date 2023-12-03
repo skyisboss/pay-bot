@@ -3,7 +3,6 @@ const wallet = require('./wallet.mock');
 const setting = require('./setting.mock');
 const invite = require('./invite.mock');
 const payment = require('./payment.mock');
-const store = require('./store.mock');
 const secured = require('./secured.mock');
 const vending = require('./vending.mock');
 // const account = require('./account.mock');

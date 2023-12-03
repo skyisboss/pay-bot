@@ -35,7 +35,7 @@ wallet = 💰 我的钱包
 payment = 🎛️ 商户集成
 secured = 🛡️ 担保交易
 store = 🏪 自动售卖
-vending = 🏪 自动售卖2
+vending = 🏪 自动售卖
 invite = 🎁 邀好友 赚佣金
 setting = ⚙️ 设置
 homeWelcome =
@@ -723,57 +723,123 @@ vendingGoodsDeleteMsg =
     
 ## ============================
 # secured = 🛡️ 担保交易
-securedAdd = 创建
-securedManage = 管理
+securedAdd = 创建交易
+securedManage = 管理交易
+securedManageEdit = 编辑交易
+securedManageDele = 删除交易
+securedManageExit = 退出交易
+securedManageContent = 设置担保内容
 securedMine = 我创建的
 securedJoin = 我参与的
-securedAgreement = 使用协议
-securedAgreementAlert = 
-    《{securedAgreement}》
-    请确认您已阅读过《{securedAgreement}》
-
+securedAgreement = 使用条款
+securedAgreementAlert = 我已了解交易风险
 securedStatusProgress = 🟢 进行中
 securedStatusPending = 🟡 待处理
-securedAgreementMsg = 
-    <b>{securedAgreement}</b>
+securedAddSuccess = 创建成功
 
-    · 担保交易使用 智能合约代码 全程管理资金和流程处理
-    · 代码无法解决人为执行因素，我们不会干预介入任何纠纷
-    · 参与双方应提前制定交易准则，例如服务交付和验收标准
-    · 担保双方加入后则无法中断，担保资金冻结直至交易完成
+securedManageNotify = 提醒对方
+securedManageDelivery = 交付服务
+securedManageReceive = 接收服务
+securedManagePayment = 放行款项
+securedManageClose =  关闭交易
+securedManageCloseMsg = 
+    <b>{secured}</b> · {securedManage}
 
-    <b>⚠️ 当您创建或参与担保交易，即表示您同意《{securedAgreement}》</b>
+    · 关闭为成立的担保交易，资金原路退回
+    
+    <b>👉 确认关闭本次担保交易吗？</b>
+
+securedManageActionMsg = 
+    <b>{secured}</b> · {securedManage}
+
+    { NUMBER($action) ->
+        *[2]
+        · 交付服务，已向对方交付具体服务
+
+        <b>👉 确认交付服务吗？</b>
+        [3]
+        · 接收服务，已收到对方交付的服务
+    
+        <b>👉 确认接收服务吗？</b>
+        [4]
+        · 放行款项，系统将款项划转对方账号
+    
+        <b>👉 确认放行款项吗？</b>
+    }
+securedManageNotifyMsg = 
+    { NUMBER($action) ->
+        *[2] 已发送提醒对方交付服务
+        [3] 已发送提醒对方接收服务
+        [4] 已发送提醒对方放行款项
+    }
 
 securedMsg = 
     <b>{secured}</b> · <a href="https://google.com/">了解更多 ›</a>
 
-    · 基于双向担保管理资金和流程
-    · 安全可靠解决交易的信任基础
-    · 无人工介入，无任何费用
+    · 基于双向担保只能管理资金和流程
+    · 可靠的模型解决交易的信任基础
+    · 无需人工介入，无需任何费用
+    
+securedAgreementMsg = 
+    · 担保交易使用智能合约全程管理资金和流程运转
+
+    <b>{securedAgreement}</b>
+    · 担保双方应提前制定各项交易准则、服务交付和接收标准等规则
+    · 乙方加入时交易开始成立，无法中断，资金款项冻结直至交易完成
+    · 状态流程未正常执行时双方可自行协商，否则流程持续停留当前状态
+    · 纠纷交易可申请人工介入, 由官方频道公布后接受任何3人成立裁判组
+    · 裁判组可获得交易双方5%保证金作为酬劳，应依据担保内容所示投票判定
+
+    <b>状态流程</b>
+     1 · 甲方创建
+     2 · 乙方加入
+     3 · 交付服务
+           甲方交付/乙方接收
+     4 · 放行款项
+           乙方放款/甲方接款
+     5 · 交易完成
+
+    <b>⚠️ 点击“确认”即表示您同意《{securedAgreement}》</b>
+
 securedManageMsg = 
     <b>{secured}</b> · {securedManage}
 
     { NUMBER($category) ->
-        *[0] <b>👇 请选择查看类别</b>  
+        *[0] <b>👇 请选择查看项目</b>  
         [1] <b>· {securedMine}: {$totalCount}</b> 
         [2] <b>· {securedJoin}: {$totalCount}</b> 
+    }
+securedManageContentMsg = 
+    <b>{secured}</b> · {securedManage}
+
+    { NUMBER($step) ->
+        *[0]
+        · 描述本次担保的交易内容，可作为纠纷判定依据
+
+        <b>👇 请输入担保的交易内容</b>  
+        [1]
+        ·{$content}
+
+         <b>✅ 设置成功</b> 
     }
 
 securedAddMsg = 
     <b>{secured}</b> » {securedAdd}
 
     { NUMBER($step) ->
-        *[0] <b>👇 请选择本次担保交易的币种</b> 
-        [1] · 交易币种: xx
+        *[0] · 创建担保交易，{securedAgreementAlert}
 
-            <b>👉 请输入本次交易我方保证金</b> 
-        [2] · 交易币种: xx
-            · 我方保证金: xx
+            <b>👇 请选择担保交易的币种</b> 
+        [1] · 担保币种: {$symbol}
 
-            <b>👇 请设置对方的保证金额度比例</b> 
-        [3] · 交易币种: xx
-            · 我方保证金: xx
-            · 对方保证金: xx
+            <b>👉 请输入担保交易金额</b> 
+        [2] · 担保币种: {$symbol}
+            · 担保金额: {$amount}
+
+            <b>👇 请设置交易保证金比例</b> 
+        [3] · 担保币种: {$symbol}
+            · 担保金额: {$amount}
+            · 保证金: {$deposit}
 
             <b>👉 请确认是否创建担保交易</b> 
     }
@@ -784,12 +850,55 @@ securedAddMsg =
 securedManageDetail =
     <b>{secured}</b> » {securedManage}
 
-    编号: <code>#592813</code>
-    担保币种: BEP20 · USDT
-    担保金额: 5391
-    对方押金: 1617.30 (30%)
-    状态流程: 创建担保 »交付服务 »放行资金 »完成
-    失效时间: 24:00:00
+    编号: <code>#{$id}</code>
+    担保币种: {$chain}
+    担保金额: {$amount}
+    保证金({$percent}): {$deposit}
+    
+    甲方卖家: {$owner}
+    乙方买家: {$partner}
+    交易内容: {$content}
+
+    失效时间: (UTC+8){$expire}
+    状态流程:
+      {securedDetailStep1}
+      {securedDetailStep2}
+      {securedDetailStep3}
+      {securedDetailStep4}
+      {securedDetailStep5}
 
     👇 担保链接(点击可复制)
-    <code>https://t.me?bot?start=123</code>
+    <code>{$link}</code>
+
+securedDetailStep1Text = 甲方创建
+securedDetailStep2Text = 乙方加入
+securedDetailStep3Text = 交付服务
+securedDetailStep3Text2 = 接收服务
+securedDetailStep4Text = 放行款项
+securedDetailStep4Text2 = 接收款项
+securedDetailStep5Text = 交易完成
+securedDetailStep1 = 
+    1 { NUMBER($step) ->
+        *[0] · {securedDetailStep1Text}
+        [1] » <b>{securedDetailStep1Text}</b> «
+    }
+securedDetailStep2 = 
+    2 { NUMBER($step) ->
+        *[0] · {securedDetailStep2Text}
+        [2] » <b>{securedDetailStep3Text}</b> «
+    }
+securedDetailStep3 = 
+    3 { NUMBER($step) ->
+        *[0] · {securedDetailStep3Text}
+        [3] » <b>{securedDetailStep3Text}</b> «
+    }
+securedDetailStep4 = 
+    4 { NUMBER($step) ->
+        *[0] · {securedDetailStep4Text}
+        [4] » <b>{securedDetailStep4Text}</b> «
+    }
+securedDetailStep5 = 
+    { NUMBER($step) ->
+        *[0] 5 · {securedDetailStep5Text}
+        [5] 5 » <b>{securedDetailStep5Text}</b> 
+    }

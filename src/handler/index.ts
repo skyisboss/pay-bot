@@ -9,6 +9,7 @@ import { PaymentView } from './payment'
 import { SecuredView } from './secured'
 import { InviteView } from './invite'
 import { VendingView } from './vending'
+import { ContractView } from './contract'
 
 const ViewsObject: AnyObjetc = {
   start: StartHome,
@@ -18,6 +19,7 @@ const ViewsObject: AnyObjetc = {
   vending: VendingView,
   secured: SecuredView,
   invite: InviteView,
+  contract: ContractView,
 }
 export const useHandler = async (bot: MyBot) => {
   // 开始页面
@@ -80,8 +82,6 @@ export const useHandler = async (bot: MyBot) => {
    * 然后此处才能解析
    */
   bot.on('message:text', async ctx => {
-    console.log('session场景', ctx.session)
-
     const message = ctx.message.text.trim()
     logger.debug('监听文本消息', message)
 

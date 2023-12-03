@@ -132,6 +132,6 @@ type RouterInfo = {
 }
 
 /**空对象*/
-type AnyObjetc = {
-  [k: string]: any
+type AnyObjetc<T = any> = {
+  [k: string]: T
 }

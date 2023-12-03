@@ -10,7 +10,7 @@ export const securedAPI = {
     })
   },
   detail: async (data: { uid: number; id: number }) => {
-    return await makeRequest<SecuredItem, 'list'>({
+    return await makeRequest<SecuredItem>({
       method: 'post',
       url: '/secured/detail',
       data,
@@ -20,7 +20,7 @@ export const securedAPI = {
 
 interface SecuredItem {
   id: number
-  chain: number
+  chain: string
   amount: number
   status: number
 }

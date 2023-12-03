@@ -1,6 +1,4 @@
 import { AnyObjetc, BotContext } from '@/@types/types'
-import { inviteAPI } from '@/api/invite'
-import { storeAPI } from '@/api/store'
 import { vendingAPI } from '@/api/vending'
 import {
   apiError,
@@ -77,7 +75,7 @@ export const ManageView = async (ctx: BotContext) => {
     index: async () => {
       ctx.session.onMessage = undefined
       const page = request.params?.page || 1
-      const api = await storeAPI.goods({ uid: ctx.session.userinfo!.id, page: page })
+      const api = await vendingAPI.goods({ uid: ctx.session.userinfo!.id, page: page })
       if (!api?.success || !api?.data) {
         return await showServerStop(ctx)
       }
