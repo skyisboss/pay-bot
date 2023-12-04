@@ -9,7 +9,7 @@
     "test": "jest --detectOpenHandles",
     "dev": "nodemon -e ts -x ts-node src/app.ts",
     "start": "NODE_ENV=production node dist/app.js",
-    "build": "tsc && tsc-alias",
+    "build": "./build.sh",
     "lint": "eslint . --ext .ts"
   },
   "keywords": [],
