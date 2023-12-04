@@ -16,6 +16,13 @@ export const securedAPI = {
       data,
     })
   },
+  edit: async (data: { uid: number; post?: AnyObjetc }) => {
+    return await makeRequest({
+      method: 'post',
+      url: '/secured/edit',
+      data,
+    })
+  },
   detail: async (data: { uid: number; id: number }) => {
     return await makeRequest<SecuredItem>({
       method: 'post',

@@ -31,6 +31,15 @@ const release = {
     console.log('---->', req.body)
     return res.json({
       ...obj,
+      data: {
+        id: 123
+      },
+    })
+  },
+  [`POST ${BASE_URL}/secured/edit`]: (req, res) => {
+    console.log('---->', req.body)
+    return res.json({
+      ...obj,
       data: {},
     })
   },

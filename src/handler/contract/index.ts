@@ -227,7 +227,7 @@ export const ManageView = async (ctx: BotContext) => {
           show_alert: true,
         })
 
-        ctx.session.scene.params = { id: 123 }
+        ctx.session.request.params = { id: api.data?.id, cate: 1 }
         return await actions.detail()
       } else {
         const btn = new InlineKeyboard()
@@ -325,6 +325,17 @@ export const ManageView = async (ctx: BotContext) => {
                 ctx.session.onMessage = undefined
                 return await invalidInput(ctx, '/contract/manage/', ctx.t('invalidAmount'))
               }
+              const api = await securedAPI.edit({
+                uid: ctx.session.userinfo!.id,
+                post: {
+                  id,
+                  content: message,
+                },
+              })
+              if (apiError(ctx, api)) {
+                return
+              }
+
               ctx.session.request.params = { id, cate, page, rep: 0 }
               ctx.session.request.views[1] = 'manage'
               ctx.session.request.goto = 'detail'
@@ -336,11 +347,31 @@ export const ManageView = async (ctx: BotContext) => {
           }
           break
         case 'join':
+          const api = await securedAPI.edit({
+            uid: ctx.session.userinfo!.id,
+            post: {
+              id,
+              join: ctx.session.userinfo?.id,
+            },
+          })
+          if (apiError(ctx, api)) {
+            return
+          }
           btn.text(ctx.t('cancel'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
           await display(ctx, ctx.t('securedManageActionMsg', { action: 1 }), btn.inline_keyboard, true)
           break
         case 'close':
           if (request.params?.yes) {
+            const api = await securedAPI.edit({
+              uid: ctx.session.userinfo!.id,
+              post: {
+                id,
+                close: id,
+              },
+            })
+            if (apiError(ctx, api)) {
+              return
+            }
             ctx.answerCallbackQuery({
               text: ctx.t('securedManageCloseSuccess'),
               show_alert: true,
@@ -355,33 +386,105 @@ export const ManageView = async (ctx: BotContext) => {
           }
           break
         case 'delivery':
+          {
+            const api = await securedAPI.edit({
+              uid: ctx.session.userinfo!.id,
+              post: {
+                id,
+                delivery: id,
+              },
+            })
+            if (apiError(ctx, api)) {
+              return
+            }
+          }
           btn.text(ctx.t('confirm'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
           btn.text(ctx.t('cancel'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
           await display(ctx, ctx.t('securedManageActionMsg', { action: 2 }), btn.inline_keyboard, true)
           break
         case 'delivery2':
+          {
+            const api = await securedAPI.edit({
+              uid: ctx.session.userinfo!.id,
+              post: {
+                id,
+                delivery2: id,
+              },
+            })
+            if (apiError(ctx, api)) {
+              return
+            }
+          }
           ctx.answerCallbackQuery({
             text: ctx.t('securedManageNotifyMsg', { action: 2 }),
             show_alert: true,
           })
           break
         case 'receive':
+          {
+            const api = await securedAPI.edit({
+              uid: ctx.session.userinfo!.id,
+              post: {
+                id,
+                receive: id,
+              },
+            })
+            if (apiError(ctx, api)) {
+              return
+            }
+          }
           btn.text(ctx.t('confirm'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
           btn.text(ctx.t('cancel'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
           await display(ctx, ctx.t('securedManageActionMsg', { action: 3 }), btn.inline_keyboard, true)
           break
         case 'receive2':
+          {
+            const api = await securedAPI.edit({
+              uid: ctx.session.userinfo!.id,
+              post: {
+                id,
+                receive2: id,
+              },
+            })
+            if (apiError(ctx, api)) {
+              return
+            }
+          }
           ctx.answerCallbackQuery({
             text: ctx.t('securedManageNotifyMsg', { action: 3 }),
             show_alert: true,
           })
           break
         case 'payment':
+          {
+            const api = await securedAPI.edit({
+              uid: ctx.session.userinfo!.id,
+              post: {
+                id,
+                payment: id,
+              },
+            })
+            if (apiError(ctx, api)) {
+              return
+            }
+          }
           btn.text(ctx.t('confirm'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
           btn.text(ctx.t('cancel'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
           await display(ctx, ctx.t('securedManageActionMsg', { action: 4 }), btn.inline_keyboard, true)
           break
         case 'payment2':
+          {
+            const api = await securedAPI.edit({
+              uid: ctx.session.userinfo!.id,
+              post: {
+                id,
+                payment2: id,
+              },
+            })
+            if (apiError(ctx, api)) {
+              return
+            }
+          }
           ctx.answerCallbackQuery({
             text: ctx.t('securedManageNotifyMsg', { action: 4 }),
             show_alert: true,
