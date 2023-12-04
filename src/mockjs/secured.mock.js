@@ -10,7 +10,7 @@ const obj = {
 
 const release = {
   [`POST ${BASE_URL}/secured/index`]: (req, res) => {
-    console.log('---->', req.params)
+    console.log('---->', req.body)
     return res.json({
       ...obj,
       data: {
@@ -27,13 +27,29 @@ const release = {
       },
     })
   },
-  [`POST ${BASE_URL}/secured/withdraw`]: (req, res) => {
-    console.log('---->', req.params)
+  [`POST ${BASE_URL}/secured/create`]: (req, res) => {
+    console.log('---->', req.body)
     return res.json({
       ...obj,
-      msg: '余额不足',
-      success: false,
       data: {},
+    })
+  },
+  [`POST ${BASE_URL}/secured/detail`]: (req, res) => {
+    console.log('---->', req.body)
+    return res.json({
+      ...obj,
+      data: {
+        id: 592813,
+        chain: 'trc20',
+        amount: 100,
+        status: 1,
+        deposit: 50,
+        percent: 0.5,
+        owner: '@pkmp4',
+        partner: '',
+        link: 'https://t.me?bot?start=123',
+        content: ''
+      },
     })
   },
 }

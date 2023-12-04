@@ -17,6 +17,7 @@ delete = ⛔ 删除
 manage = ⚙️ 管理
 reset = 🔄 重置
 loading = ⌛ 正在处理,请稍后...
+nodata = <b>🚥 暂无数据记录</b>
 pageInfo = 当前第 {$currPage} 页, 共 {$totalPage} 页
 firstPage = · 首页
 endPage = 尾页 ·
@@ -728,7 +729,7 @@ securedManage = 管理交易
 securedManageEdit = 编辑交易
 securedManageDele = 删除交易
 securedManageExit = 退出交易
-securedManageContent = 设置担保内容
+securedManageContent = 设置交易内容
 securedMine = 我创建的
 securedJoin = 我参与的
 securedAgreement = 使用条款
@@ -736,16 +737,18 @@ securedAgreementAlert = 我已了解交易风险
 securedStatusProgress = 🟢 进行中
 securedStatusPending = 🟡 待处理
 securedAddSuccess = 创建成功
-
 securedManageNotify = 提醒对方
 securedManageDelivery = 交付服务
 securedManageReceive = 接收服务
 securedManagePayment = 放行款项
 securedManageClose =  关闭交易
+securedManageCloseSuccess = ✅ 关闭交易成功 
+securedManageCompleteContent = <b>⚠️ 待完善交易内容</b>
+securedManageJoin = 加入担保交易
 securedManageCloseMsg = 
     <b>{secured}</b> · {securedManage}
 
-    · 关闭为成立的担保交易，资金原路退回
+    · 关闭未成立的担保，资金原路退回
     
     <b>👉 确认关闭本次担保交易吗？</b>
 
@@ -753,7 +756,11 @@ securedManageActionMsg =
     <b>{secured}</b> · {securedManage}
 
     { NUMBER($action) ->
-        *[2]
+        *[1]
+        · 加入交易即担保，即表示您知晓交易规则和风险
+
+        <b>👉 确认加入担保交易吗？</b>
+        [2]
         · 交付服务，已向对方交付具体服务
 
         <b>👉 确认交付服务吗？</b>
@@ -779,7 +786,7 @@ securedMsg =
     · 基于双向担保只能管理资金和流程
     · 可靠的模型解决交易的信任基础
     · 无需人工介入，无需任何费用
-    
+
 securedAgreementMsg = 
     · 担保交易使用智能合约全程管理资金和流程运转
 
@@ -787,8 +794,8 @@ securedAgreementMsg =
     · 担保双方应提前制定各项交易准则、服务交付和接收标准等规则
     · 乙方加入时交易开始成立，无法中断，资金款项冻结直至交易完成
     · 状态流程未正常执行时双方可自行协商，否则流程持续停留当前状态
-    · 纠纷交易可申请人工介入, 由官方频道公布后接受任何3人成立裁判组
-    · 裁判组可获得交易双方5%保证金作为酬劳，应依据担保内容所示投票判定
+    · 鼓励诚信交易，若申请人工介入处理纠纷，将收双方保证金5%作为费用
+    · 经由官方频道公布后邀请3人成立裁判组，依据担保内容所示投票判定
 
     <b>状态流程</b>
      1 · 甲方创建
@@ -855,11 +862,10 @@ securedManageDetail =
     担保金额: {$amount}
     保证金({$percent}): {$deposit}
     
-    甲方卖家: {$owner}
-    乙方买家: {$partner}
-    交易内容: {$content}
+    甲方: {$owner}
+    乙方: {$partner}
+    内容: {$content}
 
-    失效时间: (UTC+8){$expire}
     状态流程:
       {securedDetailStep1}
       {securedDetailStep2}
@@ -870,8 +876,8 @@ securedManageDetail =
     👇 担保链接(点击可复制)
     <code>{$link}</code>
 
-securedDetailStep1Text = 甲方创建
-securedDetailStep2Text = 乙方加入
+securedDetailStep1Text = 创建交易
+securedDetailStep2Text = 担保成立
 securedDetailStep3Text = 交付服务
 securedDetailStep3Text2 = 接收服务
 securedDetailStep4Text = 放行款项

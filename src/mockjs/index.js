@@ -16,7 +16,7 @@ const proxy = {
   ...setting,
   ...invite,
   ...payment,
-  ...store,
+  // ...store,
   ...secured,
   ...vending,
   // ...account,

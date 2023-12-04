@@ -9,6 +9,13 @@ export const securedAPI = {
       data,
     })
   },
+  create: async (data: { uid: number; coin: string; deposit: string; amount: string }) => {
+    return await makeRequest({
+      method: 'post',
+      url: '/secured/create',
+      data,
+    })
+  },
   detail: async (data: { uid: number; id: number }) => {
     return await makeRequest<SecuredItem>({
       method: 'post',
@@ -23,4 +30,10 @@ interface SecuredItem {
   chain: string
   amount: number
   status: number
+  deposit: number
+  percent: number
+  owner: string
+  partner: string
+  link: string
+  content: string
 }

@@ -4,6 +4,7 @@ import { InitScene } from '@/middleware/session'
 // import { MyBot, RouterInfo } from '@/types'
 import { InlineKeyboard } from 'grammy'
 import { InlineKeyboardButton } from 'grammy/types'
+import { math_div, math_multiply } from './math'
 
 // 解析路由
 export const parseRouter = (data: string) => {
@@ -411,4 +412,11 @@ export const compress = {
     console.log('解压缩后长度：' + strNormalString.length)
     return strNormalString
   },
+}
+
+export const WeiToEth = (amount: number, decimals: number) => {
+  return math_div(amount, 10 ** decimals)
+}
+export const EthToWei = (amount: number, decimals: number) => {
+  return math_multiply(amount, 10 ** decimals)
 }

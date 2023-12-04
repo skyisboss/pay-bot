@@ -17,7 +17,7 @@ const ViewsObject: AnyObjetc = {
   setting: SettingView,
   payment: PaymentView,
   vending: VendingView,
-  secured: SecuredView,
+  // secured: SecuredView,
   invite: InviteView,
   contract: ContractView,
 }

@@ -1,7 +1,9 @@
 import { AnyObjetc, BotContext } from '@/@types/types'
 import { securedAPI } from '@/api/secured'
 import {
+  EthToWei,
   SessionVersion,
+  WeiToEth,
   apiError,
   clearLastMessage,
   display,
@@ -10,6 +12,7 @@ import {
   pager,
   restSceneInfo,
 } from '@/util/helper'
+import { math_multiply } from '@/util/math'
 import { InlineKeyboard } from 'grammy'
 
 export const ContractView = async (ctx: BotContext) => {
@@ -57,20 +60,24 @@ export const ManageView = async (ctx: BotContext) => {
         if (apiError(ctx, api)) {
           return
         }
-        const rows = api?.data?.rows ?? []
-        const statusText = [ctx.t('securedStatusPending'), ctx.t('securedStatusProgress')]
-        rows.map(x => {
-          const symbol = getChainSymbol(ctx, x.chain) ?? ''
-          const status = statusText[x.status]
-          const title = `${status} | ${symbol} | ${x.amount}`
-          btn.text(title, `/contract/manage?goto=detail&cate=${cate}&id=${x.id}&page=${page}`).row()
-        })
-        pager(ctx, btn, api?.data?.total ?? 0, page, `/contract/manage?cate=${cate}`)
-        pageInfo = ctx.t('pageInfo', {
-          currPage: page,
-          totalPage: api?.data?.total ?? 0,
-        })
         totalCount = api?.data?.total ?? 0
+        if (totalCount) {
+          const rows = api?.data?.rows ?? []
+          const statusText = [ctx.t('securedStatusPending'), ctx.t('securedStatusProgress')]
+          rows.map(x => {
+            const symbol = getChainSymbol(ctx, x.chain) ?? ''
+            const status = statusText[x.status]
+            const title = `${status} | ${symbol} | ${x.amount}`
+            btn.text(title, `/contract/manage?goto=detail&cate=${cate}&id=${x.id}&page=${page}`).row()
+          })
+          pager(ctx, btn, api?.data?.total ?? 0, page, `/contract/manage?cate=${cate}`)
+          pageInfo = ctx.t('pageInfo', {
+            currPage: page,
+            totalPage: api?.data?.total ?? 0,
+          })
+        } else {
+          pageInfo = ctx.t('nodata')
+        }
       }
 
       btn.text(ctx.t('goBack'), '/contract?rep=1')
@@ -131,7 +138,9 @@ export const ManageView = async (ctx: BotContext) => {
                   text = '无需保证金'
                   break
                 default:
-                  text = Math.round(e * amount).toFixed(2)
+                  const wei = EthToWei(amount, 6)
+                  const eth = WeiToEth(math_multiply(wei, e), 6)
+                  text = eth.toFixed(2)
               }
               if (i % 2 == 0) {
                 btn.text(`${e * 100}% (${text})`, `/contract/manage?goto=review&deposit=${e}`)
@@ -190,9 +199,9 @@ export const ManageView = async (ctx: BotContext) => {
       // 点击按钮后跳转地址
       const jump = request.params?.jump
       if (jump) {
-        btn.text(ctx.t('confirm'), `/secured/manage?goto=${jump}`)
+        btn.text(ctx.t('confirm'), `/contract/manage?goto=${jump}`)
       } else {
-        btn.text(ctx.t('confirm'), '/secured')
+        btn.text(ctx.t('confirm'), '/contract')
       }
 
       const msg = ctx.t('securedAgreementMsg')
@@ -200,7 +209,19 @@ export const ManageView = async (ctx: BotContext) => {
       await display(ctx, msg, btn.inline_keyboard, true)
     },
     review: async () => {
-      if (request.params?.confirm) {
+      const coin = ctx.session.scene.params?.coin
+      const amount = ctx.session.scene.params?.amount
+      const deposit = ctx.session.request.params?.deposit ?? ctx.session.scene.params?.deposit
+      if (request.params?.yes) {
+        const api = await securedAPI.create({
+          uid: ctx.session.userinfo!.id,
+          coin,
+          amount,
+          deposit,
+        })
+        if (apiError(ctx, api)) {
+          return
+        }
         await ctx.answerCallbackQuery({
           text: ctx.t('securedAddSuccess'),
           show_alert: true,
@@ -210,11 +231,10 @@ export const ManageView = async (ctx: BotContext) => {
         return await actions.detail()
       } else {
         const btn = new InlineKeyboard()
-        btn.text(ctx.t('confirm'), '/contract/manage?goto=review&confirm=1')
+        btn.text(ctx.t('confirm'), `/contract/manage?goto=review&yes=1`)
         btn.text(ctx.t('cancel'), '/contract?rep=1')
-        const coin = ctx.session.scene.params?.coin
-        const amount = ctx.session.scene.params?.amount
-        const deposit = ctx.session.request.params?.deposit
+
+        ctx.session.scene.params['deposit'] = deposit
         const msg = ctx.t('securedAddMsg', {
           step: 3,
           amount,
@@ -225,12 +245,13 @@ export const ManageView = async (ctx: BotContext) => {
       }
     },
     detail: async () => {
-      let status = 2
+      let status = 1
       const id = Number(request.params?.id ?? 0)
       const cate = Number(request.params?.cate ?? 0)
       const page = Number(request.params?.page ?? 1)
+      const rep = request.params?.rep ?? '1'
 
-      const api = await securedAPI.index({ uid: ctx.session.userinfo!.id })
+      const api = await securedAPI.detail({ uid: ctx.session.userinfo!.id, id })
       if (apiError(ctx, api)) {
         return
       }
@@ -239,8 +260,12 @@ export const ManageView = async (ctx: BotContext) => {
       const isOwner = cate === 1
       // 根据status和user显示对应操作
       if (status === 1) {
-        btn.text(ctx.t('securedManageContent'), `${baseRouter}:content`)
-        btn.text(ctx.t('securedManageClose'), `${baseRouter}:close`).row()
+        if (isOwner) {
+          btn.text(ctx.t('securedManageContent'), `${baseRouter}:content`)
+          btn.text(ctx.t('securedManageClose'), `${baseRouter}:close`).row()
+        } else {
+          btn.text(ctx.t('securedManageJoin'), `${baseRouter}:join`).row()
+        }
       }
       if (status === 2) {
         if (isOwner) {
@@ -267,20 +292,19 @@ export const ManageView = async (ctx: BotContext) => {
       btn.text(ctx.t('goBack'), `/contract/manage?cate=${cate}&page=${page}`)
 
       const msg = ctx.t('securedManageDetail', {
-        id: '592813',
+        id: (api.data?.id ?? '').toString(),
         step: status,
-        content: '购买vip账号',
-        chain: 'BEP20 · USDT',
-        amount: 5391,
-        deposit: 1617.3,
-        percent: '30%',
-        owner: '@pkmp4',
-        partner: '@pkmp5',
-        expire: '12/02 24:00:00',
-        link: 'https://t.me?bot?start=123',
+        content: api.data?.content || ctx.t('securedManageCompleteContent'),
+        chain: getChainSymbol(ctx, api.data?.chain ?? '') ?? '',
+        amount: api.data?.amount ?? '',
+        deposit: api.data?.deposit ?? '',
+        percent: api.data?.percent ?? '',
+        owner: api.data?.owner ?? '',
+        partner: api.data?.partner || '--',
+        link: api.data?.link ?? '',
       })
 
-      await display(ctx, msg, btn.inline_keyboard, true)
+      await display(ctx, msg, btn.inline_keyboard, rep)
     },
     edit: async () => {
       const params = request.params?.opt ?? ''
@@ -298,11 +322,12 @@ export const ManageView = async (ctx: BotContext) => {
             call: async ctx => {
               const message = (ctx.message?.text ?? '').trim()
               if (!message || message.length > 1024) {
-                return await invalidInput(ctx, ctx.t('invalidAmount'))
+                ctx.session.onMessage = undefined
+                return await invalidInput(ctx, '/contract/manage/', ctx.t('invalidAmount'))
               }
-              ctx.session.request.params = { id, cate, page }
-              ctx.session.request.goto = 'detail'
+              ctx.session.request.params = { id, cate, page, rep: 0 }
               ctx.session.request.views[1] = 'manage'
+              ctx.session.request.goto = 'detail'
 
               ctx.session.onMessage = undefined
               await clearLastMessage(ctx)
@@ -310,10 +335,24 @@ export const ManageView = async (ctx: BotContext) => {
             },
           }
           break
-        case 'close':
-          btn.text(ctx.t('confirm'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
+        case 'join':
           btn.text(ctx.t('cancel'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
-          await display(ctx, ctx.t('securedManageCloseMsg'), btn.inline_keyboard, true)
+          await display(ctx, ctx.t('securedManageActionMsg', { action: 1 }), btn.inline_keyboard, true)
+          break
+        case 'close':
+          if (request.params?.yes) {
+            ctx.answerCallbackQuery({
+              text: ctx.t('securedManageCloseSuccess'),
+              show_alert: true,
+            })
+            ctx.session.request.params = { cate }
+            ctx.session.request.goto = 'index'
+            return await actions.index()
+          } else {
+            btn.text(ctx.t('confirm'), `/contract/manage?goto=edit&opt=${id}:${cate}:${page}:close&yes=1`)
+            btn.text(ctx.t('cancel'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
+            await display(ctx, ctx.t('securedManageCloseMsg'), btn.inline_keyboard, true)
+          }
           break
         case 'delivery':
           btn.text(ctx.t('confirm'), `/contract/manage/?goto=detail&id=${id}&cate=${cate}&page=${page}`)
