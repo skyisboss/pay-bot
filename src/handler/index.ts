@@ -6,7 +6,6 @@ import { WalletView } from './wallet'
 import { MyBot, BotContext, AnyObjetc, SceneInfo, CallbackRequest } from '@/@types/types'
 import { SettingView } from './setting'
 import { PaymentView } from './payment'
-import { SecuredView } from './secured'
 import { InviteView } from './invite'
 import { VendingView } from './vending'
 import { ContractView } from './contract'
@@ -17,7 +16,6 @@ const ViewsObject: AnyObjetc = {
   setting: SettingView,
   payment: PaymentView,
   vending: VendingView,
-  // secured: SecuredView,
   invite: InviteView,
   contract: ContractView,
 }
