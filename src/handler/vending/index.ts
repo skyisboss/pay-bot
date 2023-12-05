@@ -44,7 +44,7 @@ export const VendingView = async (ctx: BotContext) => {
   }
 }
 
-export const ManageView = async (ctx: BotContext) => {
+const ManageView = async (ctx: BotContext) => {
   const request = ctx.session.request
   const scene = ctx.session.scene
 

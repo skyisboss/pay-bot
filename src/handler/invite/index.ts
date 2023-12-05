@@ -27,7 +27,7 @@ export const InviteView = async (ctx: BotContext) => {
   }
 }
 
-export const LogsView = async (ctx: BotContext) => {
+const LogsView = async (ctx: BotContext) => {
   const request = ctx.session.request
   const actions: AnyObjetc = {
     detail: async () => {

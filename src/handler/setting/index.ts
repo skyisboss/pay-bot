@@ -42,7 +42,7 @@ export const SettingView = async (ctx: BotContext) => {
   }
 }
 
-export const BackupView = async (ctx: BotContext) => {
+const BackupView = async (ctx: BotContext) => {
   const request = ctx.session.request
   const scene = ctx.session.scene
 
@@ -244,7 +244,7 @@ export const PinCodeView = async (ctx: BotContext) => {
   // 执行方法
   await actions?.[request.goto]?.()
 }
-export const LangView = async (ctx: BotContext) => {
+const LangView = async (ctx: BotContext) => {
   const request = ctx.session.request
   const scene = ctx.session.scene
   const langList = ctx.session.config?.lang ?? []
@@ -297,7 +297,7 @@ export const LangView = async (ctx: BotContext) => {
   // 执行方法
   await actions?.[request.goto]?.()
 }
-export const CurrencyView = async (ctx: BotContext) => {
+const CurrencyView = async (ctx: BotContext) => {
   const request = ctx.session.request
   const scene = ctx.session.scene
   const currency = ctx.session.config?.currency ?? []

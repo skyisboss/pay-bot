@@ -37,7 +37,7 @@ type StepType = {
   condition: boolean
   callback: () => Promise<void>
 }
-export const ManageView = async (ctx: BotContext) => {
+const ManageView = async (ctx: BotContext) => {
   const request = ctx.session.request
 
   const actions: AnyObjetc = {
