@@ -5,6 +5,7 @@ import { InitScene } from '@/middleware/session'
 import { InlineKeyboard } from 'grammy'
 import { InlineKeyboardButton } from 'grammy/types'
 import { math_div, math_multiply } from './math'
+import url from 'url'
 
 // 解析路由
 export const parseRouter = (data: string) => {
@@ -39,27 +40,19 @@ export const parseRouter = (data: string) => {
 
 // 解析callback_query数据
 export const parseCallbackQuery = (data: string) => {
-  //  http://hostname.com/wallet/deposit/xxx?id1=111&id2=222
-  const location = new URL(data, 'http://hostname.com')
-  // /wallet/deposit/ => ['abc', 'sada']
-  const pathname = location.pathname.split('/').filter(x => !!x)
-  // ?id1=111&id2=222 => { 'id1' => '111', 'id2' => '222' }
-  const params = location.searchParams
+  const uri = 'http://hostname.com' + data
+  const parse = url.parse(uri, true)
+  const pathname = parse.pathname?.split('/').filter((x: any) => !!x) ?? []
+  const params = parse.query
 
-  let paramsObj: AnyObjetc = {}
-  if (params.size > 0) {
-    params.forEach((value, key) => {
-      paramsObj[key] = value
-    })
-  }
-
-  const res: CallbackRequest = {
+  const res = {
     views: pathname,
-    params: paramsObj,
+    params: params,
     homePage: pathname.length === 1,
-    replace: paramsObj?.rep ?? false,
-    goto: paramsObj?.goto ?? 'index',
-  }
+    replace: params?.rep ?? false,
+    goto: params?.goto ?? 'index',
+  } as CallbackRequest
+  logger.debug('parseCallbackQuery', res)
 
   return res
 }

@@ -1,7 +1,9 @@
 module.exports = {
   apps : [{
+    name: 'api',
     script: 'pnpm mocker ./src/mockjs --port 30003',
   },{
+    name: 'app',
     script: 'dist/app.js',
   }],
 
