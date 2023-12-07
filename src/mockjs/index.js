@@ -41,6 +41,15 @@ const proxy = {
       }
     });
   },
+  'POST /api/user/checkUser': (req, res) => {
+    console.log('req.body=', req.body)
+    return res.json({
+      err: 0,
+      msg: '',
+      success: true,
+      data: {}
+    });
+  },
   [`POST /api/user/config`]: (req, res) => {
     console.log('---->', req.body)
     return res.json({

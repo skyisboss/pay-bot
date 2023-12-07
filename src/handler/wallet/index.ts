@@ -208,7 +208,7 @@ export const TransferView = async (ctx: BotContext) => {
           }
 
           // 判断收款人是否存在
-          const api = await userAPI.getUserinfo({ uid: message })
+          const api = await userAPI.checkUser({ openid: message })
           if (apiError(ctx, api, true)) {
             return await invalidInput(ctx, ctx.t('invalidPayee'))
           }
@@ -735,7 +735,7 @@ export const HongbaoView = async (ctx: BotContext) => {
           }
 
           // 判断用户是否存在
-          const api = await userAPI.getUserinfo({ uid: message })
+          const api = await userAPI.checkUser({ openid: message })
           if (apiError(ctx, api, true)) {
             return await invalidInput(ctx, ctx.t('hongbaoUserFail'))
           }

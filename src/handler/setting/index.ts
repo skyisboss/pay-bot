@@ -189,7 +189,8 @@ export const PinCodeView = async (ctx: BotContext) => {
         // 所以这一步需要校验旧密码是否正确，然后执行下一步【输入新的密码】
         if (status === 1) {
           request.params.text = ''
-          if (md5(text) !== ctx.session.userinfo?.pin_code) {
+          const hash = md5(ctx.session.userinfo?.openid + text + ctx.session.userinfo?.invite_code)
+          if (hash !== ctx.session.userinfo?.pin_code) {
             await showServerStop(ctx, ctx.t('pincodeOldFail'))
           } else {
             request.params.status = '0'

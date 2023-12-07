@@ -8,10 +8,10 @@ export const userAPI = {
       data,
     })
   },
-  getUserinfo: async (data: { uid: string }) => {
-    return await makeRequest<ApiResult.Userinfo>({
+  checkUser: async (data: { openid: string }) => {
+    return await makeRequest({
       method: 'post',
-      url: '/user/userinfo',
+      url: '/user/checkUser',
       data,
     })
   },
