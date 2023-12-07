@@ -22,7 +22,7 @@ export const WalletView = async (ctx: BotContext) => {
 
   if (request.homePage) {
     // 如果未设置安全密码，需要先设置
-    if (!ctx.session?.userinfo?.pincode) {
+    if (!ctx.session?.userinfo?.pin_code) {
       ctx.answerCallbackQuery({
         text: ctx.t('pinpwdSetAlert'),
         show_alert: true,

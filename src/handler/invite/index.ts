@@ -1,24 +1,23 @@
 import { AnyObjetc, BotContext } from '@/@types/types'
-import { inviteAPI } from '@/api/invite'
-import { apiError, display, showServerStop } from '@/util/helper'
+import { userAPI } from '@/api/user'
+import { SessionVersion, apiError, display, pager, restSceneInfo, showServerStop } from '@/util/helper'
+import { format } from 'date-fns'
 import { InlineKeyboard } from 'grammy'
 
 export const InviteView = async (ctx: BotContext) => {
   const request = ctx.session.request
   if (request.homePage) {
-    const api = await inviteAPI.index({ uid: ctx.session.userinfo!.id })
-    if (apiError(ctx, api)) {
-      return
-    }
-
+    restSceneInfo(ctx)
     const btn = new InlineKeyboard()
     // 配合 bot.inlineQuery 使用 # src/handler/index.ts
     btn.switchInline(ctx.t('sendToFriend'), 'link').row()
-    btn.text(ctx.t('inviteLog'), '/invite/logs/?goto=detail')
+    btn.text(ctx.t('inviteDetail'), '/invite/detail/?goto=index')
     btn.text(ctx.t('goBack'), '/start?rep=1')
 
+    const bot_link = ctx.session.config?.bot_link
+    const invite_code = ctx.session.userinfo?.invite_code
     const msg = ctx.t('inviteMsg', {
-      link: api.data?.link ?? '',
+      link: `${bot_link}?start=${invite_code}`,
     })
 
     await display(ctx, msg, btn.inline_keyboard, true)
@@ -27,41 +26,85 @@ export const InviteView = async (ctx: BotContext) => {
   }
 }
 
-const LogsView = async (ctx: BotContext) => {
+const DetailView = async (ctx: BotContext) => {
   const request = ctx.session.request
   const actions: AnyObjetc = {
-    detail: async () => {
+    index: async () => {
       const btn = new InlineKeyboard()
-      btn.text(ctx.t('inviteWithdraw'), '/invite/logs?goto=withdraw').row()
+      btn.text(ctx.t('inviteUsers'), '/invite/detail/?goto=users')
+      btn.text(ctx.t('inviteWithdraw'), '/invite/detail?goto=withdraw').row()
       btn.text(ctx.t('goBack'), '/invite')
 
-      const api = await inviteAPI.detail({ uid: ctx.session.userinfo!.id })
+      const api = await userAPI.inviteDetail({ openid: ctx.session.userinfo!.openid })
       if (apiError(ctx, api)) {
         return
       }
       const invites = api?.data?.invites
       const balance = api?.data?.balance
-      const msg = ctx.t('inviteDetail', {
-        count1: invites?.count1,
-        count2: invites?.count2,
-        count3: invites?.count3,
-        count4: invites?.count4,
-        trc20: balance?.trc20,
-        bep20: balance?.bep20,
-        erc20: balance?.erc20,
+      const msg = ctx.t('inviteDetailMsg', {
+        count: invites?.count,
+        // count1: invites?.count1,
+        // count2: invites?.count2,
+        // count3: invites?.count3,
+        // count4: invites?.count4,
+        trc20: balance?.trc20 ?? '0',
+        bep20: balance?.bep20 ?? '0',
+        erc20: balance?.erc20 ?? '0',
       })
 
       await display(ctx, msg, btn.inline_keyboard, true)
     },
+    users: async () => {
+      const page = Number(request.params?.page ?? 1)
+      const cate = request.params?.cate ?? '1'
+      const version = SessionVersion(ctx)
+      const btn = new InlineKeyboard()
+      const btnList = [ctx.t('inviteTime4'), ctx.t('inviteTime1'), ctx.t('inviteTime2'), ctx.t('inviteTime3')]
+      btnList.map((x, index) => {
+        const curr = index + 1
+        let text = ''
+        if (curr === Number(cate)) {
+          text = `${x} ◉`
+        } else {
+          text = `${x} ○`
+        }
+        if (curr === btnList.length) {
+          btn.text(text, `/invite/detail/?goto=users&cate=${curr}&v=${version}`).row()
+        } else {
+          btn.text(text, `/invite/detail/?goto=users&cate=${curr}&v=${version}`)
+        }
+      })
+
+      const api = await userAPI.inviteUsers({
+        openid: ctx.session.userinfo!.openid,
+        page,
+        cate,
+      })
+      if (apiError(ctx, api)) {
+        return
+      }
+      const rows = api.data?.rows ?? []
+      let text = ctx.t('inviteUsersMsg') + `\r\n\r\n`
+      rows.map(x => {
+        text += `${format(x?.created_at ?? 0, 'MM/dd HH:ii')} | ${x.account} \r\n`
+      })
+      pager(ctx, btn, api?.data?.total ?? 0, page, `/invite/detail?goto=users&cate=${cate}&v=${version}`)
+      btn.text(ctx.t('goBack'), '/invite/detail')
+      let pageInfo = ctx.t('pageInfo', {
+        currPage: page,
+        totalPage: api?.data?.total ?? 0,
+      })
+      await display(ctx, text + `\r\n` + pageInfo, btn.inline_keyboard, true)
+    },
     withdraw: async () => {
-      const api = await inviteAPI.withdraw({ uid: ctx.session.userinfo!.id })
+      const api = await userAPI.inviteWithdraw({ openid: ctx.session.userinfo!.openid })
 
       if (apiError(ctx, api)) {
         return
       }
       await showServerStop(ctx, ctx.t('inviteWithdrawSuccess'))
 
-      await actions.detail()
+      await actions.index()
     },
   }
 
@@ -70,5 +113,5 @@ const LogsView = async (ctx: BotContext) => {
 }
 
 const views: AnyObjetc = {
-  logs: LogsView,
+  detail: DetailView,
 }

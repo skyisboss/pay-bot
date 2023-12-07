@@ -36,5 +36,5 @@ export const initI18n = async () => {
 }
 
 async function myLocaleNegotiator(context: BotContext) {
-  return context.session.userinfo?.lang ?? 'cn'
+  return context.session.userinfo?.language ?? 'cn'
 }

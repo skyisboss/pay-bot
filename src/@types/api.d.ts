@@ -1,14 +1,19 @@
 declare namespace ApiResult {
   interface Userinfo {
     id: number
-    vip: number
-    lang: string
-    first_name: string
+    rank: number
+    openid: string
+    language: string
+    nickname: string
     /**是否已设置安全密码 */
-    pincode: boolean
+    pin_code: string
     /**法币单位 */
     fait_symbol: string
     currency: string
+    invite_code: string
+    version: number
+    created: string
+    backup_account: string
   }
 
   interface WalletIndex {
@@ -20,7 +25,8 @@ declare namespace ApiResult {
   }
 
   interface Config {
-    lang: {
+    bot_link: string
+    language: {
       code: string
       lang: string
     }[]

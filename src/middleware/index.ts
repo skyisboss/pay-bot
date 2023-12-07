@@ -32,7 +32,8 @@ export const useMiddleware = async (bot: MyBot) => {
         return next()
       } else {
         try {
-          const userinfo = await userAPI.userinfo({ fromId: ctx.from.id })
+          const userinfo = await userAPI.userinfo({ uid: ctx.from.id, nickname: ctx.from.first_name })
+
           if (userinfo?.success) {
             ctx.session.userinfo = userinfo?.data
             return next()

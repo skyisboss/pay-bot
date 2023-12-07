@@ -6,6 +6,7 @@ import { InlineKeyboard } from 'grammy'
 import { InlineKeyboardButton } from 'grammy/types'
 import { math_div, math_multiply } from './math'
 import url from 'url'
+import crypto from 'crypto'
 
 // 解析路由
 export const parseRouter = (data: string) => {
@@ -52,7 +53,6 @@ export const parseCallbackQuery = (data: string) => {
     replace: params?.rep ?? false,
     goto: params?.goto ?? 'index',
   } as CallbackRequest
-  logger.debug('parseCallbackQuery', res)
 
   return res
 }
@@ -85,6 +85,11 @@ export const apiError = (ctx: BotContext, apiRes: AnyObjetc, onlyCheck?: boolean
     return true
   }
   return false
+}
+
+export const md5 = (content: string) => {
+  let md5 = crypto.createHash('md5')
+  return md5.update(content).digest('hex') // 把输出编程16进制的格式
 }
 
 /**渲染内容 */

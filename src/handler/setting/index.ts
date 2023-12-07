@@ -1,16 +1,18 @@
 import { AnyObjetc, BotContext } from '@/@types/types'
 import {
+  SessionVersion,
   apiError,
   checkScene,
   clearLastMessage,
   compress,
   display,
   keyboard,
+  md5,
   restSceneInfo,
   showServerStop,
 } from '@/util/helper'
 import { InlineKeyboard } from 'grammy'
-import { settingAPI } from '@/api/setting'
+import { userAPI } from '@/api/user'
 
 export const SettingView = async (ctx: BotContext) => {
   const request = ctx.session.request
@@ -25,15 +27,18 @@ export const SettingView = async (ctx: BotContext) => {
     btn.text(ctx.t('settingCurrency'), '/setting/currency').row()
     btn.text(ctx.t('goBack'), '/start?rep=1')
 
-    const lang = ctx.session.config?.lang?.find(x => x.code === ctx.session.userinfo!.lang)
-    const currency = ctx.session.config?.currency.find(x => x.code === ctx.session.userinfo!.currency)
-    const vip = ctx.session.userinfo!.vip
-    const vipSymbol = vip <= 50 ? '🎖' : vip <= 99 ? '💎' : '👑'
+    const userinfo = ctx.session.userinfo
+    const config = ctx.session.config
+    const language = config?.language?.find(x => x.code === userinfo?.language)?.lang ?? ''
+    const currency = config?.currency.find(x => x.code === userinfo?.currency)
+
+    const rank = userinfo?.rank ?? 1
+    const rankStr = rank <= 50 ? '🎖' : rank <= 99 ? '💎' : '👑'
     const msg = ctx.t('settingMsg', {
-      uid: ctx.session.userinfo!.id.toString(),
-      vip: `${vip}${vipSymbol}`,
-      lang: lang?.lang ?? '',
-      currency: `${currency?.symbol}(${currency?.code})`,
+      uid: userinfo?.openid ?? '',
+      rank: `${rankStr}(${rank})`,
+      language: language,
+      currency: `${currency?.symbol ?? ''}(${currency?.code?.toUpperCase() ?? ''})`,
     })
 
     await display(ctx, msg, btn.inline_keyboard, true)
@@ -49,43 +54,31 @@ const BackupView = async (ctx: BotContext) => {
   const actions: AnyObjetc = {
     index: async () => {
       restSceneInfo(ctx)
-      const api = await settingAPI.backup({ uid: ctx.session.userinfo!.id })
-      if (apiError(ctx, api)) {
-        return
-      }
-      const account = api.data?.account
       const btn = new InlineKeyboard()
+      console.log(ctx.session.userinfo)
 
       // 是否被关联的账号，被关联的账号操作资产转移
-      if (account?.id && account?.id === ctx.session.userinfo?.id) {
-        btn.text(ctx.t('backupCopyAssets'), `/setting/backup?goto=assets&mainId=${account?.id}`).row()
+      const backup_account = ctx.session.userinfo?.backup_account
+      if (backup_account === ctx.session.userinfo?.openid) {
+        btn.text(ctx.t('backupCopyAssets'), `/setting/backup?goto=assets&account=${backup_account}`).row()
       } else {
-        if (account?.id) {
+        if (backup_account) {
           // 已设置备用账户
-          btn.text(ctx.t('backupEdit'), `/setting/backup?goto=add&account=${account?.id}`).row()
+          btn.text(ctx.t('backupEdit'), `/setting/backup?goto=add&account=${backup_account}`).row()
         } else {
           // 未设置备用账户
-          btn.text(ctx.t('backupAdd'), `/setting/backup?goto=add&account=${account?.id}`).row()
+          btn.text(ctx.t('backupAdd'), `/setting/backup?goto=add&account=${backup_account}`).row()
         }
       }
       btn.text(ctx.t('goBack'), '/setting?rep=1')
       const msg = ctx.t('backupMsg', {
-        status: account?.id ? 1 : 0,
-        account: account?.username ?? '',
+        status: backup_account ? 1 : 0,
+        account: backup_account ?? '',
       })
 
       await display(ctx, msg, btn.inline_keyboard, true)
     },
     add: async () => {
-      ctx.session.scene = {
-        name: 'BackupView',
-        router: '',
-        createAt: Date.now(),
-        store: new Map(),
-        params: {
-          username: '',
-        },
-      }
       const account = request.params?.account ?? ''
       const btn = new InlineKeyboard()
       btn.text(ctx.t('cancel'), '/setting?rep=1')
@@ -100,17 +93,16 @@ const BackupView = async (ctx: BotContext) => {
         time: Date.now(),
         call: async ctx => {
           const message = (ctx.message?.text ?? '').trim()
-          if (!/^@\w+$/.test(message)) {
+          if (!/^\d+$/.test(message) || message === ctx.session.userinfo?.openid) {
             restSceneInfo(ctx)
             const btn = new InlineKeyboard()
             btn.text(ctx.t('goBack'), '/setting/?rep=1')
 
             await clearLastMessage(ctx)
-
-            return await display(ctx, msg, btn.inline_keyboard)
+            return await display(ctx, ctx.t('invalidInput'), btn.inline_keyboard)
           }
           // 跳转操作方法
-          ctx.session.scene.params['username'] = message
+          ctx.session.scene.params = { account: message }
           ctx.session.request.goto = 'done'
           await clearLastMessage(ctx)
           await BackupView(ctx)
@@ -119,8 +111,8 @@ const BackupView = async (ctx: BotContext) => {
     },
     assets: async () => {
       // 关联的账号
-      const mainId = request.params?.mainId ?? ''
-      const api = await settingAPI.assets({ uid: ctx.session.userinfo!.id, main_id: mainId })
+      const account = request.params?.account ?? ''
+      const api = await userAPI.assetsTransfer({ openid: ctx.session.userinfo!.openid, account })
       if (apiError(ctx, api)) {
         return
       }
@@ -131,10 +123,17 @@ const BackupView = async (ctx: BotContext) => {
       })
     },
     done: async () => {
+      const account = ctx.session.scene.params?.account ?? ''
+      const api = await userAPI.settingBackup({ openid: ctx.session.userinfo!.openid, account })
+      if (apiError(ctx, api)) {
+        return
+      }
+      restSceneInfo(ctx)
+      ctx.session.onMessage = undefined
+      ctx.session.userinfo!.backup_account = account
+
       const btn = new InlineKeyboard()
       btn.text(ctx.t('goBack'), '/setting?rep=1')
-
-      const account = ctx.session.scene.params?.username ?? ''
       const msg = ctx.t('backupAddMsg', {
         step: 1,
         action: account ? 1 : 0,
@@ -142,7 +141,6 @@ const BackupView = async (ctx: BotContext) => {
       })
 
       await display(ctx, msg, btn.inline_keyboard)
-      restSceneInfo(ctx)
     },
   }
 
@@ -156,9 +154,9 @@ export const PinCodeView = async (ctx: BotContext) => {
   const actions: AnyObjetc = {
     index: async () => {
       const btn = new InlineKeyboard()
-      const pincode = ctx.session.userinfo?.pincode ?? false
-      const status = pincode ? 1 : 0
-      if (status) {
+      const pincode = ctx.session.userinfo?.pin_code
+      // const status = pincode ? 1 : 0
+      if (pincode) {
         // 已设置
         btn.text(ctx.t('pinpCodeEdit'), `/setting/pincode?goto=input&status=1`).row()
       } else {
@@ -167,7 +165,7 @@ export const PinCodeView = async (ctx: BotContext) => {
       }
       btn.text(ctx.t('goBack'), '/setting?rep=1')
       const msg = ctx.t('settingPinCodeMsg', {
-        status: status,
+        status: pincode ? 1 : 0,
       })
 
       await display(ctx, msg, btn.inline_keyboard, true)
@@ -187,12 +185,15 @@ export const PinCodeView = async (ctx: BotContext) => {
       const text = request.params?.text ?? ''
       const length = text.length
       if (length === 6) {
-        // edit = 1 时页面为要求输入旧密码，下一步则需要再次输入新的密码
+        // status = 1 时页面为要求输入旧密码，下一步则需要再次输入新的密码
         // 所以这一步需要校验旧密码是否正确，然后执行下一步【输入新的密码】
         if (status === 1) {
-          ctx.session.scene.params['oldPin'] = text
           request.params.text = ''
-          request.params.status = '0'
+          if (md5(text) !== ctx.session.userinfo?.pin_code) {
+            await showServerStop(ctx, ctx.t('pincodeOldFail'))
+          } else {
+            request.params.status = '0'
+          }
           await actions.input()
         } else {
           const btn = new InlineKeyboard()
@@ -218,21 +219,14 @@ export const PinCodeView = async (ctx: BotContext) => {
     },
     done: async () => {
       const text = request.params?.text
-      const old = ctx.session.scene.params?.oldPin
-      const api = await settingAPI.pincode({
-        uid: ctx.session.userinfo!.id,
-        pwd: text,
-        old,
+      const api = await userAPI.settingPinCode({
+        openid: ctx.session.userinfo!.openid,
+        pin_code: text,
       })
-      if (apiError(ctx, api, true)) {
-        if (api?.success === undefined || api?.msg === undefined) {
-          await showServerStop(ctx, ctx.t('httpError'))
-        }
-        // pincodeOldFail / pincodeFail
-        await showServerStop(ctx, ctx.t(api?.msg || 'httpError'))
-        await actions.index()
+      if (apiError(ctx, api)) {
         return
       }
+      ctx.session.userinfo!.pin_code = api?.data?.pin_code ?? ''
 
       const btn = new InlineKeyboard()
       btn.text(ctx.t('goBack'), '/setting/pincode?rep=1')
@@ -247,12 +241,25 @@ export const PinCodeView = async (ctx: BotContext) => {
 const LangView = async (ctx: BotContext) => {
   const request = ctx.session.request
   const scene = ctx.session.scene
-  const langList = ctx.session.config?.lang ?? []
+  const langList = ctx.session.config?.language ?? []
 
   const actions: AnyObjetc = {
     index: async () => {
       const btn = new InlineKeyboard()
-      const code = ctx.session.userinfo?.lang
+      const version = SessionVersion(ctx)
+      let code = ctx.session.userinfo?.language ?? ''
+      if (request.params?.v) {
+        code = request.params?.code ?? ''
+        const api = await userAPI.settingLang({ openid: ctx.session.userinfo!.openid, lang_code: code ?? '' })
+        if (apiError(ctx, api)) {
+          return
+        }
+        await ctx.answerCallbackQuery({
+          text: 'ok',
+          show_alert: true,
+        })
+      }
+
       let lang = ''
       langList.map(x => {
         let text = x.lang
@@ -260,7 +267,7 @@ const LangView = async (ctx: BotContext) => {
           lang = x.lang
           text += ` ✅`
         }
-        btn.text(text, `/setting/lang?goto=done&code=${x.code}`).row()
+        btn.text(text, `/setting/lang?goto=index&code=${x.code}&v=${version}`).row()
       })
       btn.text(ctx.t('goBack'), '/setting?rep=1')
 
@@ -269,28 +276,6 @@ const LangView = async (ctx: BotContext) => {
       })
 
       await display(ctx, msg, btn.inline_keyboard, ctx.session.request.params?.rep ?? 1)
-    },
-    done: async () => {
-      const code = ctx.session.request.params?.code
-      const lang = ctx.session.userinfo?.lang
-      if (lang && lang != code) {
-        const api = await settingAPI.lang({ uid: ctx.session.userinfo!.id, code: code })
-        if (apiError(ctx, api)) {
-          return
-        }
-        ctx.session.userinfo!.lang = code
-        ctx.session.request.params['rep'] = 1
-        await ctx.answerCallbackQuery({
-          text: 'ok',
-          show_alert: true,
-        })
-        await actions.index()
-      } else {
-        await ctx.answerCallbackQuery({
-          text: 'ok',
-          show_alert: true,
-        })
-      }
     },
   }
 
@@ -305,15 +290,28 @@ const CurrencyView = async (ctx: BotContext) => {
   const actions: AnyObjetc = {
     index: async () => {
       const btn = new InlineKeyboard()
-      const code = ctx.session.userinfo?.currency ?? ''
+      const version = SessionVersion(ctx)
+      let code = ctx.session.userinfo?.currency ?? ''
+      if (request.params?.v) {
+        code = request.params?.code
+        const api = await userAPI.settingCurrency({ openid: ctx.session.userinfo!.openid, currency: code })
+        if (apiError(ctx, api)) {
+          return
+        }
+        await ctx.answerCallbackQuery({
+          text: 'ok',
+          show_alert: true,
+        })
+      }
+
       let currencyName = ''
       currency.map(x => {
-        let text = `${x.symbol}(${x.code})`
+        let text = `${x.symbol}(${x.code.toUpperCase()})`
         if (code === x.code) {
           currencyName = text
           text += ` ✅`
         }
-        btn.text(text, `/setting/currency?goto=done&code=${x.code}`).row()
+        btn.text(text, `/setting/currency?goto=index&code=${x.code}&v=${version}`).row()
       })
       btn.text(ctx.t('goBack'), '/setting?rep=1')
 
@@ -321,33 +319,7 @@ const CurrencyView = async (ctx: BotContext) => {
         currency: currencyName,
       })
 
-      if (request.params?.fiat != undefined) {
-        await ctx.answerCallbackQuery({
-          text: 'ok',
-          show_alert: true,
-        })
-      }
-
       await display(ctx, msg, btn.inline_keyboard, ctx.session.request.params?.rep ?? 1)
-    },
-    done: async () => {
-      const code = ctx.session.request.params?.code ?? ''
-      const currency = ctx.session.userinfo?.currency
-
-      if (code !== currency) {
-        const api = await settingAPI.currency({ uid: ctx.session.userinfo!.id, code: code })
-        if (apiError(ctx, api)) {
-          return
-        }
-        ctx.session.userinfo!.currency = code
-        ctx.session.request.params['rep'] = 1
-        await ctx.answerCallbackQuery({
-          text: 'ok',
-          show_alert: true,
-        })
-        return await actions.index()
-      }
-      return await ctx.answerCallbackQuery()
     },
   }
 

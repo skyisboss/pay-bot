@@ -1,10 +1,12 @@
-import { bot } from '@/app'
 import { logger } from '@/logger'
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
+import dotenv from 'dotenv'
 
-const BASE_URL = 'http://localhost:30003/api'
+dotenv.config()
+const API_URL = process.env.API_URL ?? 'http://localhost:30003/api'
+
 const instance: AxiosInstance = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_URL,
   timeout: 20000,
   headers: {
     'content-type': 'application/json;charset=UTF-8',
@@ -44,7 +46,16 @@ instance.interceptors.response.use(
     return data
   },
   error => {
-    logger.error('http请求出错', { error })
+    const log = {
+      code: error?.code,
+      baseURL: error?.config.baseURL,
+      url: error?.config.url,
+      data: error?.config.data,
+      message: error?.message,
+    }
+    logger.error('http请求出错', { log })
+    console.log(log)
+
     // return Promise.reject(new Error(error.message))
     return {}
   },
