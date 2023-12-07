@@ -86,6 +86,18 @@ export const apiError = (ctx: BotContext, apiRes: AnyObjetc, onlyCheck?: boolean
   }
   return false
 }
+export const apiErrorWithGoback = (ctx: BotContext, apiRes: AnyObjetc, goback: string) => {
+  if (!apiRes?.success || apiRes.err != 0) {
+    try {
+      const btn = new InlineKeyboard()
+      btn.text(ctx.t('goBack'), goback)
+      display(ctx, apiRes?.msg ?? ctx.t('serverStop'), btn.inline_keyboard)
+    } catch (error) {
+      //
+    }
+  }
+  return false
+}
 
 export const md5 = (content: string) => {
   let md5 = crypto.createHash('md5')

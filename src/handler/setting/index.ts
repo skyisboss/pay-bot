@@ -2,6 +2,7 @@ import { AnyObjetc, BotContext } from '@/@types/types'
 import {
   SessionVersion,
   apiError,
+  apiErrorWithGoback,
   checkScene,
   clearLastMessage,
   compress,
@@ -55,7 +56,6 @@ const BackupView = async (ctx: BotContext) => {
     index: async () => {
       restSceneInfo(ctx)
       const btn = new InlineKeyboard()
-      console.log(ctx.session.userinfo)
 
       // 是否被关联的账号，被关联的账号操作资产转移
       const backup_account = ctx.session.userinfo?.backup_account
@@ -64,7 +64,7 @@ const BackupView = async (ctx: BotContext) => {
       } else {
         if (backup_account) {
           // 已设置备用账户
-          btn.text(ctx.t('backupEdit'), `/setting/backup?goto=add&account=${backup_account}`).row()
+          btn.text(ctx.t('backupRemove'), `/setting/backup?goto=remove&account=${backup_account}`).row()
         } else {
           // 未设置备用账户
           btn.text(ctx.t('backupAdd'), `/setting/backup?goto=add&account=${backup_account}`).row()
@@ -76,6 +76,27 @@ const BackupView = async (ctx: BotContext) => {
         account: backup_account ?? '',
       })
 
+      await display(ctx, msg, btn.inline_keyboard, true)
+    },
+    remove: async () => {
+      const confirm = request.params?.yes
+      const account = request.params?.account ?? ''
+      if (confirm) {
+        const api = await userAPI.settingBackup({ openid: ctx.session.userinfo!.openid, account, remove: true })
+        if (apiError(ctx, api)) {
+          return
+        }
+        ctx.session.userinfo!.backup_account = ''
+        ctx.session.request.params = {}
+        return actions.index()
+      }
+      const btn = new InlineKeyboard()
+      btn.text(ctx.t('confirm'), `/setting/backup?goto=remove&account=${account}&yes=1`)
+      btn.text(ctx.t('cancel'), '/setting?rep=1')
+      const msg = ctx.t('backupMsg', {
+        status: 2,
+        account,
+      })
       await display(ctx, msg, btn.inline_keyboard, true)
     },
     add: async () => {
@@ -93,13 +114,21 @@ const BackupView = async (ctx: BotContext) => {
         time: Date.now(),
         call: async ctx => {
           const message = (ctx.message?.text ?? '').trim()
-          if (!/^\d+$/.test(message) || message === ctx.session.userinfo?.openid) {
+          if (!/^\d+$/.test(message)) {
             restSceneInfo(ctx)
             const btn = new InlineKeyboard()
             btn.text(ctx.t('goBack'), '/setting/?rep=1')
 
             await clearLastMessage(ctx)
             return await display(ctx, ctx.t('invalidInput'), btn.inline_keyboard)
+          }
+          if (message === ctx.session.userinfo?.openid) {
+            restSceneInfo(ctx)
+            const btn = new InlineKeyboard()
+            btn.text(ctx.t('goBack'), '/setting/?rep=1')
+
+            await clearLastMessage(ctx)
+            return await display(ctx, ctx.t('backupEditFail'), btn.inline_keyboard)
           }
           // 跳转操作方法
           ctx.session.scene.params = { account: message }
@@ -125,7 +154,7 @@ const BackupView = async (ctx: BotContext) => {
     done: async () => {
       const account = ctx.session.scene.params?.account ?? ''
       const api = await userAPI.settingBackup({ openid: ctx.session.userinfo!.openid, account })
-      if (apiError(ctx, api)) {
+      if (apiErrorWithGoback(ctx, api, '/setting?rep=1')) {
         return
       }
       restSceneInfo(ctx)

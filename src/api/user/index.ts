@@ -43,7 +43,7 @@ export const userAPI = {
       data,
     })
   },
-  settingBackup: async (data: { openid: string; account: string }) => {
+  settingBackup: async (data: { openid: string; account: string; remove?: boolean }) => {
     return await makeRequest({
       method: 'post',
       url: '/user/setting/backup',

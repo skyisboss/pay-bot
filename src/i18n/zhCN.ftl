@@ -380,19 +380,24 @@ settingMsg =
 ## ============================
 # 备用账户
 backupAdd = ➕ 添加备份账户
-backupEdit = ✏️ 更改备份账户
+backupEdit = 更改备份账户
+backupEditFail = 备份账户不能添加自己
+backupRemove = ⛔ 移除备份账户
 backupCopyAssets = 转移资产
+
 backupMsg = 
     <b>{settingBackup}</b>
 
     { NUMBER($status) ->
         *[0] · 若当前账户无法登录时，备份账户可用于转移资产
         [1] · 备份账户: {$account}
+        [2] · 备份账户: {$account}
     }
 
     { NUMBER($status) ->
         *[0] <b>⚠️ 还未关联备份账户</b>
         [1] <b>✅ 已经关联备份账户</b>
+        [2] <b>⚠️ 请确认是否移除备份账户</b>
     }
 
 backupAddMsg = 
