@@ -2,8 +2,8 @@ import { AnyObjetc } from '@/@types/types'
 import { makeRequest } from '@/http'
 
 export const walletAPI = {
-  index: async (data: { fromId: number }) => {
-    return await makeRequest<ApiResult.WalletIndex>({
+  index: async (data: { openid: string }) => {
+    return await makeRequest<ApiResult.WalletInfo>({
       method: 'post',
       url: '/wallet/index',
       data,
@@ -18,10 +18,10 @@ export const walletAPI = {
     })
   },
   /**查询充值信息 */
-  depositInfo: async (data: { uid: number; chain: string }) => {
+  depositInfo: async (data: { uid: number; token: string }) => {
     return await makeRequest<DepositInfo>({
       method: 'post',
-      url: '/wallet/deposit/info',
+      url: '/wallet/deposit',
       data,
     })
   },
@@ -43,7 +43,7 @@ export const walletAPI = {
       data,
     })
   },
-  transfer: async (data: { uid: number; chain: string; payee: string; amount: string }) => {
+  transfer: async (data: { openid: string; to_user: string; token: string; amount: string }) => {
     return await makeRequest({
       method: 'post',
       url: '/wallet/transfer',
@@ -59,7 +59,7 @@ export const walletAPI = {
     })
   },
   /**提币 */
-  withdraw: async (data: { uid: number; chain: string; amount: string; address: string }) => {
+  withdraw: async (data: { openid: string; token: string; amount: string; address: string }) => {
     return await makeRequest({
       method: 'post',
       url: '/wallet/withdraw',
@@ -67,26 +67,26 @@ export const walletAPI = {
     })
   },
   /**查看记录 列表 */
-  historyList: async (data: { item: number; page: number }) => {
+  historyList: async (data: { openid: string; item: number; page: number }) => {
     return await makeRequest<HistoryItem, 'list'>({
       method: 'post',
-      url: '/wallet/historyList',
+      url: '/wallet/history/index',
       data,
     })
   },
   /**查看记录 详情 */
-  historyDetail: async (data: { item: number; id: number }) => {
+  historyDetail: async (data: { openid: string; item: number; id: number }) => {
     return await makeRequest({
       method: 'post',
-      url: '/wallet/historyDetail',
+      url: '/wallet/history/detail',
       data,
     })
   },
   /**发红包 */
   fahongbao: async (data: {
-    uid: number
+    openid: string
     type: string
-    chain: string
+    token: string
     amount: string
     user: string
     split: string
@@ -101,8 +101,8 @@ export const walletAPI = {
 
 interface DepositInfo {
   address: string
-  min: string
-  received: string
+  min_amount: string
+  max_amount: string
   qrcode: string
 }
 
@@ -112,11 +112,11 @@ interface BalanceInfo {
 }
 
 interface RateRes {
-  usd_cny: string
-  usd_php: string
-  usd_trc20: string
-  usd_erc20: string
-  usd_bep20: string
+  cny: string
+  php: string
+  trc20: string
+  erc20: string
+  bep20: string
   updated_at: number
 }
 

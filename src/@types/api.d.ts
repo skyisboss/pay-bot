@@ -16,12 +16,11 @@ declare namespace ApiResult {
     backup_account: string
   }
 
-  interface WalletIndex {
-    trc20: number
-    erc20: number
-    bep20: number
-    rate: number
-    symbol: string
+  interface WalletInfo {
+    [k: string]: {
+      raw: number
+      str: string
+    }
   }
 
   interface Config {

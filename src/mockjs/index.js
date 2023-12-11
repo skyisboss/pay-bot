@@ -33,7 +33,7 @@ const proxy = {
         nickname: "fox",
         language: "cn",
         currency: "cny",
-        pin_code: "",
+        pin_code: "123",
         invite_code: "imiTeui",
         version: 1,
         created: "2023-12-06T11:17:28.895Z",

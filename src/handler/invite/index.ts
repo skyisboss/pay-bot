@@ -88,11 +88,14 @@ const DetailView = async (ctx: BotContext) => {
       rows.map(x => {
         text += `${format(x?.created_at ?? 0, 'MM/dd HH:ii')} | ${x.account} \r\n`
       })
-      pager(ctx, btn, api?.data?.total ?? 0, page, `/invite/detail?goto=users&cate=${cate}&v=${version}`)
+      const totalItem = api?.data?.total ?? 0
+      const pageSize = api?.data?.size ?? 5
+      const totalPage = Math.ceil(totalItem / pageSize)
+      pager(ctx, btn, totalPage, page, `/invite/detail?goto=users&cate=${cate}&v=${version}`)
       btn.text(ctx.t('goBack'), '/invite/detail')
       let pageInfo = ctx.t('pageInfo', {
         currPage: page,
-        totalPage: api?.data?.total ?? 0,
+        totalPage: totalPage,
       })
       await display(ctx, text + `\r\n` + pageInfo, btn.inline_keyboard, true)
     },

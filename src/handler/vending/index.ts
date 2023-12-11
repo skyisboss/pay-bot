@@ -84,7 +84,10 @@ const ManageView = async (ctx: BotContext) => {
       ;(api.data?.rows ?? []).map(x => {
         btn.text(x.title, `/vending/manage?goto=detail&id=${x.id}&page=${page}`).row()
       })
-      pager(ctx, btn, api?.data?.total ?? 0, page, `/vending/manage?goto=index`)
+      const totalItem = api?.data?.total ?? 0
+      const pageSize = api?.data?.size ?? 5
+      const totalPage = Math.ceil(totalItem / pageSize)
+      pager(ctx, btn, totalPage, page, `/vending/manage?goto=index`)
       btn.text(ctx.t('goBack'), '/vending?rep=1')
 
       const msg = ctx.t('vendingManageMsg', {
@@ -93,7 +96,7 @@ const ManageView = async (ctx: BotContext) => {
       })
       const pageInfo = ctx.t('pageInfo', {
         currPage: page,
-        totalPage: api?.data?.total ?? 0,
+        totalPage: totalPage,
       })
       await display(ctx, msg + `\r\n\r\n` + pageInfo, btn.inline_keyboard, true)
     },

@@ -218,16 +218,32 @@ export const parseInputMessage = (ctx: BotContext) => {
 }
 
 /** 分页 */
-export const pager = (ctx: BotContext, btn: InlineKeyboard, total: number, page: number, router: string) => {
+export const pager = (
+  ctx: BotContext,
+  btn: InlineKeyboard,
+  // total: number,
+  totalPage: number,
+  page: number,
+  router: string,
+) => {
   page = Number(page)
-  if (page == 1) {
-    btn.text(ctx.t('endPage'), `${router}&page=${total}`)
-    btn.text(ctx.t('nextPage'), `${router}&page=${page + 1}`).row()
-  } else {
-    btn.text(ctx.t('firstPage'), `${router}&page=1`)
-    btn.text(ctx.t('endPage'), `${router}&page=${total}`)
-    btn.text(ctx.t('prvePage'), `${router}&page=${page - 1}`)
-    btn.text(ctx.t('nextPage'), `${router}&page=${page + 1}`).row()
+  // const totalPage = Math.ceil(total / size)
+
+  if (totalPage > 1) {
+    if (totalPage === page) {
+      btn.text(ctx.t('firstPage'), `${router}&page=1`)
+      btn.text(ctx.t('prvePage'), `${router}&page=${page - 1}`).row()
+    } else {
+      if (page == 1) {
+        btn.text(ctx.t('endPage'), `${router}&page=${totalPage}`)
+        btn.text(ctx.t('nextPage'), `${router}&page=${page + 1}`).row()
+      } else {
+        btn.text(ctx.t('firstPage'), `${router}&page=1`)
+        btn.text(ctx.t('endPage'), `${router}&page=${totalPage}`)
+        btn.text(ctx.t('prvePage'), `${router}&page=${page - 1}`)
+        btn.text(ctx.t('nextPage'), `${router}&page=${page + 1}`).row()
+      }
+    }
   }
 }
 

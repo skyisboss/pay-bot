@@ -64,10 +64,13 @@ export const ManageView = async (ctx: BotContext) => {
           const title = `${status} | ${chain} | ${x.amount}`
           btn.text(title, `/secured/manage?goto=detail&cate=${cate}&id=${x.id}&page=${page}`).row()
         })
-        pager(ctx, btn, api?.data?.total ?? 0, page, `/secured/manage?cate=${cate}`)
+        const totalItem = api?.data?.total ?? 0
+        const pageSize = api?.data?.size ?? 5
+        const totalPage = Math.ceil(totalItem / pageSize)
+        pager(ctx, btn, totalPage, page, `/secured/manage?cate=${cate}`)
         pageInfo = ctx.t('pageInfo', {
           currPage: page,
-          totalPage: api?.data?.total ?? 0,
+          totalPage: totalPage,
         })
         totalCount = api?.data?.total ?? 0
       }

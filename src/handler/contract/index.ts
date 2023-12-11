@@ -70,10 +70,13 @@ const ManageView = async (ctx: BotContext) => {
             const title = `${status} | ${symbol} | ${x.amount}`
             btn.text(title, `/contract/manage?goto=detail&cate=${cate}&id=${x.id}&page=${page}`).row()
           })
-          pager(ctx, btn, api?.data?.total ?? 0, page, `/contract/manage?cate=${cate}`)
+          const totalItem = api?.data?.total ?? 0
+          const pageSize = api?.data?.size ?? 5
+          const totalPage = Math.ceil(totalItem / pageSize)
+          pager(ctx, btn, totalPage, page, `/contract/manage?cate=${cate}`)
           pageInfo = ctx.t('pageInfo', {
             currPage: page,
-            totalPage: api?.data?.total ?? 0,
+            totalPage: totalPage,
           })
         } else {
           pageInfo = ctx.t('nodata')

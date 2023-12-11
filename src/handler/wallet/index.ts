@@ -43,21 +43,25 @@ export const WalletView = async (ctx: BotContext) => {
     btn.text(ctx.t('goBack'), '/start?rep=1')
 
     // 获取钱包信息
-    const api = await walletAPI.index({ fromId: ctx.from!.id })
+    const api = await walletAPI.index({ openid: ctx.session.userinfo.openid })
     if (apiError(ctx, api)) {
       return
     }
 
+    const userinfo = ctx.session.userinfo
+    const currencyRows = ctx.session.config?.currency ?? []
+    const currency = currencyRows.find(x => x.code == userinfo.currency)
+
     const msg = ctx.t('walletHomeMsg', {
       uid: ctx.from!.id.toString(),
-      trc20Balance: api?.data?.trc20 ?? 0,
-      bep20Balance: api?.data?.bep20 ?? 0,
-      erc20Balance: api?.data?.erc20 ?? 0,
-      fait_code: 'CNY',
-      fait_symbol: '¥',
-      fait_balance: 10000,
-      moneyRate: api?.data?.rate ?? 0,
+      trc20: api?.data?.trc20?.str ?? 0,
+      bep20: api?.data?.bep20?.str ?? 0,
+      erc20: api?.data?.erc20?.str ?? 0,
+      fait_currency: (currency?.code ?? '').toUpperCase(),
+      fait_symbol: currency?.symbol ?? '',
+      fait_balance: api?.data?.fait?.str ?? '',
     })
+
     await display(ctx, msg, btn.inline_keyboard, true)
   } else {
     if ('rate' === request.views?.[1]) {
@@ -67,11 +71,11 @@ export const WalletView = async (ctx: BotContext) => {
       }
 
       const msg = ctx.t('showRate', {
-        usd_cny: api.data?.usd_cny ?? '',
-        usd_php: api.data?.usd_php ?? '',
-        usd_trc20: api.data?.usd_trc20 ?? '',
-        usd_erc20: api.data?.usd_erc20 ?? '',
-        usd_bep20: api.data?.usd_bep20 ?? '',
+        usd_cny: api.data?.cny ?? '',
+        usd_php: api.data?.php ?? '',
+        usd_trc20: api.data?.trc20 ?? '',
+        usd_erc20: api.data?.erc20 ?? '',
+        usd_bep20: api.data?.bep20 ?? '',
         updated: format(api.data?.updated_at ?? 0, 'MM/dd HH:ii'),
       })
 
@@ -110,7 +114,7 @@ export const DepositView = async (ctx: BotContext) => {
       const symbol = coinSymbols?.[coin]
       const chain = coinChain[coin]
       const show = qrCode === 1
-      const api = await walletAPI.depositInfo({ uid: ctx.session.userinfo!.id, chain: chain })
+      const api = await walletAPI.depositInfo({ uid: ctx.session.userinfo!.id, token: chain })
       if (apiError(ctx, api)) {
         return
       }
@@ -125,10 +129,10 @@ export const DepositView = async (ctx: BotContext) => {
 
       const msg = ctx.t('depositAddress', {
         address: api?.data?.address ?? '',
-        symbol: symbol,
-        received: api?.data?.received ?? '',
-        minAmount: api?.data?.min ?? '',
-        qrcode: show ? api?.data?.qrcode ?? '' : '',
+        token: symbol,
+        min_amount: api?.data?.min_amount ?? '',
+        qrcode: api?.data?.qrcode ?? '',
+        show: show ? 1 : 0,
       })
 
       await display(ctx, msg, btn.inline_keyboard, true)
@@ -304,10 +308,10 @@ export const TransferView = async (ctx: BotContext) => {
       ctx.session.onMessage = undefined
       restSceneInfo(ctx)
       const api = await walletAPI.transfer({
-        uid: ctx.session.userinfo!.id,
-        chain,
-        amount,
-        payee,
+        openid: ctx.session.userinfo!.openid,
+        amount: amount,
+        token: chain,
+        to_user: payee,
       })
       if (apiError(ctx, api)) {
         return
@@ -436,8 +440,8 @@ export const WithdrawView = async (ctx: BotContext) => {
       const { chain, balance, address } = ctx.session.scene.params
       await ctx.editMessageText(ctx.t('loading'))
       const api = await walletAPI.withdraw({
-        uid: ctx.session.userinfo!.id,
-        chain,
+        openid: ctx.session.userinfo!.openid,
+        token: chain,
         address,
         amount: balance,
       })
@@ -488,7 +492,7 @@ export const HistoryView = async (ctx: BotContext) => {
     list: async () => {
       const item = Number(request.params?.item ?? '')
       const page = request.params?.page || 1
-      const api = await walletAPI.historyList({ item, page })
+      const api = await walletAPI.historyList({ item, page, openid: ctx.session.userinfo!.openid })
       if (apiError(ctx, api)) {
         return
       }
@@ -496,21 +500,24 @@ export const HistoryView = async (ctx: BotContext) => {
       const btn = new InlineKeyboard()
       const typeList = [ctx.t('hongbao1'), ctx.t('hongbao2'), ctx.t('hongbao3')]
       api?.data?.rows?.map(x => {
-        let showText = ''
+        let showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${x.chain} · 💎${x.amount}`
         // 红包
-        if (3 === item) {
-          showText = `⏰${format(x.created_at, 'MM/dd HH:ii')} · ${typeList?.[Number(x?.hbType)]}(💎${x.amount})`
-        } else {
-          showText = `⏰${format(x.created_at, 'MM/dd HH:ii')} · 🔹${x.chain} · 💎${x.amount}`
-        }
+        // if (3 === item) {
+        //   showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${typeList?.[Number(x?.hbType)]}(💎${x.amount})`
+        // } else {
+        //   showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${x.chain} · 💎${x.amount}`
+        // }
         btn.text(showText, `/wallet/history?goto=detail&item=${item}&id=${x.id}`).row()
       })
-      pager(ctx, btn, api?.data?.total ?? 0, page, `/wallet/history?goto=list&item=${item}`)
+      const totalItem = api?.data?.total ?? 0
+      const pageSize = api?.data?.size ?? 5
+      const totalPage = Math.ceil(totalItem / pageSize)
+      pager(ctx, btn, totalPage, page, `/wallet/history?goto=list&item=${item}`)
       btn.text(ctx.t('goBack'), '/wallet/history')
 
       const pageInfo = ctx.t('pageInfo', {
         currPage: page,
-        totalPage: api?.data?.total ?? 0,
+        totalPage: totalPage,
       })
 
       const counts = (api?.data as any)?.counts ?? {}
@@ -527,7 +534,7 @@ export const HistoryView = async (ctx: BotContext) => {
     detail: async () => {
       const item = Number(request.params?.item ?? '')
       const id = Number(request.params?.id)
-      const apiRes = await walletAPI.historyDetail({ item, id })
+      const apiRes = await walletAPI.historyDetail({ item, id, openid: ctx.session.userinfo!.openid })
       if (apiError(ctx, apiRes)) {
         return
       }
@@ -815,9 +822,9 @@ export const HongbaoView = async (ctx: BotContext) => {
       const amount = ctx.session.request.params?.amount ?? ctx.session.scene.params?.amount ?? ''
 
       const api = await walletAPI.fahongbao({
-        uid: ctx.session.userinfo!.id,
+        openid: ctx.session.userinfo!.openid,
         type,
-        chain,
+        token: chain,
         amount,
         user,
         split,

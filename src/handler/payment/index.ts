@@ -219,10 +219,13 @@ const ManageView = async (ctx: BotContext) => {
           const title = `${time} | ${chain ?? '-'} | ${x.amount}`
           btn.text(title, `/payment/manage?goto=more&id=${x.id}`).row()
         })
-        pager(ctx, btn, api?.data?.total ?? 0, page, `/payment/manage?goto=detail&cate=${category}`)
+        const totalItem = api?.data?.total ?? 0
+        const pageSize = api?.data?.size ?? 5
+        const totalPage = Math.ceil(totalItem / pageSize)
+        pager(ctx, btn, totalPage, page, `/payment/manage?goto=detail&cate=${category}`)
         pageInfo = ctx.t('pageInfo', {
           currPage: page,
-          totalPage: api?.data?.total ?? 0,
+          totalPage: totalPage,
         })
       }
 

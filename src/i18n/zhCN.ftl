@@ -19,8 +19,8 @@ reset = 🔄 重置
 loading = ⌛ 正在处理,请稍后...
 nodata = <b>🚥 暂无数据记录</b>
 pageInfo = 当前第 {$currPage} 页, 共 {$totalPage} 页
-firstPage = · 首页
-endPage = 尾页 ·
+firstPage =「 首页
+endPage = 尾页 」
 prvePage = « 上页
 nextPage = 下页 »
 statusSuccess = 成功
@@ -50,13 +50,13 @@ walletHomeMsg =
     <b>{wallet}</b> 
     ID: <code>{$uid}</code>
 
-    <b>TRC20 · USDT =</b> <code>{$trc20Balance}</code>
+    <b>TRC20 · USDT =</b> <code>{$trc20}</code>
 
-    <b>BEP20 · USDT =</b> <code>{$bep20Balance}</code>
+    <b>BEP20 · USDT =</b> <code>{$bep20}</code>
 
-    <b>ERC20 · USDT =</b> <code>{$erc20Balance}</code>
+    <b>ERC20 · USDT =</b> <code>{$erc20}</code>
 
-    <b>{$fait_code} ≈ </b> <code>{$fait_symbol}{$fait_balance}</code>
+    <b>{$fait_currency} ≈ </b> <code>{$fait_symbol}{$fait_balance}</code>
 
 transfer = 💸 转账
 hongbao = 🧧 发红包
@@ -87,15 +87,19 @@ depositCurrency =
     <b>👇 选择一种您将充值的货币</b>
 
 depositAddress = 
-    <b>{deposit} {$symbol}</b>
+    <b>{deposit} {$token}</b>
     请将资金发送到以下地址
 
     <code>{$address}</code>
     (点击地址可复制)
-
-    ⚠️ 该地址仅支持 <b>{$symbol}</b> 充值, 最小充值: {$minAmount}
-    ⏱️ 充值后预计{$received}分钟到账
-    {$qrcode}
+    { NUMBER($show) ->
+        *[0] {""}
+        [1] {""}<a href="{$qrcode}">  </a>
+    }
+    ⚠️ 该地址仅支持 <b>{$token}</b> 充值, 最小充值: {$min_amount}
+    
+    
+# ⏱️ 充值后预计{$received}分钟到账
 ## ============================
 # 钱包转账
 invalidPayee = 收款人不存在
@@ -155,15 +159,19 @@ withdrawBalanceFail = 余额不足
 withdrawInfo = 
     { NUMBER($step) ->
         *[1]
-        当前币种: {$chain}
+        币种: {$chain}
         [2]
-        当前币种: {$chain}
-        钱包余额: {$balance}
-        提币地址: {$address}
+        地址: {$address}
+        币种: {$chain}
+        <b>*可用余额: {$balance}</b>
+        <b>*实际到账: {$balance}</b>
+        <b>*手续费: 10</b>
         [3]
-        当前币种: {$chain}
-        钱包余额: {$balance}
-        提币地址: {$address}
+        地址: {$address}
+        币种: {$chain}
+        <b>*可用余额: {$balance}</b>
+        <b>*实际到账: {$balance}</b>
+        <b>*手续费: 10</b>
     }
     
 withdrawActionMsg = 
@@ -181,10 +189,10 @@ withdrawActionMsg =
         <b>请输入 {$chain} 提币地址</b>
         ⚠️ 注意: 错误的地址将可能导致资产丢失
         [2] 
-        <b>👇 检查一下信息是否正确</b>
+
         {withdrawInfo}
 
-        <b>⚠️ 请确认是否提币?</b>
+        <b>⚠️ 检查信息是否正确并确认是否提币?</b>
         [3] 
         {withdrawInfo}
 
@@ -216,6 +224,7 @@ historyListMsg =
     · 总计: {$count3}
 
     · {$pageInfo}
+    
 depositHistoryDetail = 
     {depositHistory} {$time}
     ------------------------
