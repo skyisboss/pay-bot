@@ -219,12 +219,8 @@ historyListMsg =
         [3] {hongbaoHistory}
     }
 
-    · 今日: {$count1}
-    · 昨日: {$count2}
-    · 总计: {$count3}
-
     · {$pageInfo}
-    
+
 depositHistoryDetail = 
     {depositHistory} {$time}
     ------------------------
