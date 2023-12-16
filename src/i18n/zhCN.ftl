@@ -223,9 +223,8 @@ historyListMsg =
 
 depositHistoryDetail = 
     {depositHistory} {$time}
-    ------------------------
 
-    币种: {$chain}
+    币种: {$token}
     ------------------------
     金额: {$amount}
     ------------------------
@@ -536,6 +535,14 @@ inviteDetailMsg =
 paymentNew = 开通支付应用
 paymentManage = 管理支付应用
 paymentDocument = 使用文档
+paymentCreateMsg = 
+    <b>{payment}</b> » {paymentNew}
+    
+    · 前置条件: VIP5或钱包任意币种余额 >= 50
+    · 余额转出费用3%，其他任何操作 0 费用
+
+    <b>👉 请确认是否开通支付应用</b>
+
 paymentCreateSuccess = 
     <b>{payment}</b> » {paymentNew}
     
@@ -631,8 +638,23 @@ vendingDelete = 删除商品
 vendingManage = 管理商品
 vendingSetting = 店铺设置
 vendingSettingName = 店铺名称
-vendingSettingStatus= 店铺状态
+vendingSettingDescribe = 店铺简介
+vendingSettingPayment = 付款货币
+vendingSettingStatus= { NUMBER($status) ->
+    *[0] {vendingStatusClose}
+    [1] {vendingStatusOpen}
+}
 vendingSettingSuccess = ✅ 操作成功 
+vendingCreate = 开通店铺
+vendingMsg =
+    <b>{vending}</b> 
+    
+    · 开通自动售卖服务，一键触达终端用户
+    · 全天候在线自动销售，省时省力更省心
+    · <a href="https://google.com/">点我了解更多</a>
+
+    余额转出费用3%，其他无任何费用
+
 vendingHomeMsg = 
     <b>{vending}</b> { NUMBER($status) ->
         *[0] [{vendingStatusClose}]
@@ -657,22 +679,36 @@ vendingManageMsg =
         [1] · {$name}
     }
 # 🟢 正常 🔴 关闭
-vendingStatusOpen = 🟢 营业中
-vendingStatusClose = 🔴 休息中
+vendingStatusOpen = 🟢 正在营业
+vendingStatusClose = 🟠 暂停营业
+vendingSettingTypeMsg =
+    <b>{vending}</b> » {vendingSetting}
+
+    { NUMBER($type) ->
+        *[1] 
+        · 店铺第一印象从名称开始
+
+        <b>👉 请回复店铺名称</b> 
+        [2] 
+        · 店铺简介,让客户快速了解本店业务
+
+        <b>👉 请回复店铺简介</b> 
+        [3] 
+        · 设置客户付款货币，默认支持全部币种
+
+        <b>👇 请选择付款货币种类</b> 
+    }
+
+vendingUnSetting = (未设置)
 vendingSettingMsg =
     <b>{vending}</b> » {vendingSetting}
 
-    { NUMBER($step) ->
-        *[0]
-        · 店铺名称: (未设置)
-        · 店铺状态: {vendingStatusOpen}
+    · 店铺名称: {$name}
+    · 店铺简介: {$describe}
+    · 店铺状态: {$status}
+    · 付款货币: {$payment}
 
-        <b>👇 请选择设置项</b> 
-        [1]
-        · 设置名称
-
-        <b>👉 请回复店铺名称</b> 
-    }
+    <b>👇 请选择设置项</b> 
 
 vendingTextTitle = 标题
 vendingTextPrice = 价格
@@ -697,8 +733,8 @@ vendingGoodsMsg =
 
         [1]
         <code>{vendingTextTitle}=[{$title}]
-        {vendingTextPrice}=[{$price}]
         {vendingTextDesc}=[{$desc}]
+        {vendingTextPrice}=[{$price}]
         {vendingTextKami}=[{$kami}]</code>
 
         <b>👆 复制以上格式，编辑正确信息后发送回复</b>
@@ -807,25 +843,24 @@ securedMsg =
     · 无需人工介入，无需任何费用
 
 securedAgreementMsg = 
-    · 担保交易使用智能合约全程管理资金和流程运转
-
-    <b>{securedAgreement}</b>
-    · 担保双方应提前制定各项交易准则、服务交付和接收标准等规则
-    · 乙方加入时交易开始成立，无法中断，资金款项冻结直至交易完成
-    · 状态流程未正常执行时双方可自行协商，否则流程持续停留当前状态
-    · 鼓励诚信交易，若申请人工介入处理纠纷，将收双方保证金5%作为费用
-    · 经由官方频道公布后邀请3人成立裁判组，依据担保内容所示投票判定
+    <b>{secured}</b> · <b>{securedAgreement}</b>
+    · 本担保交易近管理资金和流程，担保内容和交付由双方自行协定
+    · 担保双方应事先协定各项交易准则，服务内容，交付和验收标准
+    · 乙方加入时担保开始成立，无法中断，资金款项冻结直至交易完成
+    · 流程未正常执行时双方可自行协商，否则流程持续停留当前状态
+    · 鼓励诚信交易，若申请人工介入，将扣取双方保证金5%作为裁判费用
+    · 经由官方群公布后接受3人申请裁判员，依据担保内容所示投票裁定
 
     <b>状态流程</b>
      1 · 甲方创建
      2 · 乙方加入
      3 · 交付服务
-           甲方交付/乙方接收
+           (甲方交付/乙方接收)
      4 · 放行款项
-           乙方放款/甲方接款
+           (乙方放款/甲方收款)
      5 · 交易完成
 
-    <b>⚠️ 点击“确认”即表示您同意《{securedAgreement}》</b>
+    <b>⚠️ 点击“确认”表示您同意《{securedAgreement}》</b>
 
 securedManageMsg = 
     <b>{secured}</b> · {securedManage}
@@ -842,7 +877,7 @@ securedManageContentMsg =
         *[0]
         · 描述本次担保的交易内容，可作为纠纷判定依据
 
-        <b>👇 请输入担保的交易内容</b>  
+        <b>👉 请输入担保的交易内容</b>  
         [1]
         ·{$content}
 
@@ -862,7 +897,7 @@ securedAddMsg =
         [2] · 担保币种: {$symbol}
             · 担保金额: {$amount}
 
-            <b>👇 请设置交易保证金比例</b> 
+            <b>👇 请设置缴纳保证金比例</b> 
         [3] · 担保币种: {$symbol}
             · 担保金额: {$amount}
             · 保证金: {$deposit}

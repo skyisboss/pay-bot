@@ -9,7 +9,7 @@ const obj = {
 }
 
 const release = {
-  [`POST ${BASE_URL}/secured/index`]: (req, res) => {
+  [`POST ${BASE_URL}/contract/index`]: (req, res) => {
     console.log('---->', req.body)
     return res.json({
       ...obj,
@@ -19,7 +19,7 @@ const release = {
         rows: new Array(5).fill('').map( (item, index) => { 
           return {
             id: index + 1,
-            chain: Mock.mock('@pick(["trc20","bep20","erc20"])'),
+            token: Mock.mock('@pick(["trc20","bep20","erc20"])'),
             amount: Mock.mock('@integer(10000, 100000)'),
             status: Mock.mock('@pick([0,1])'),
           } 
@@ -27,7 +27,7 @@ const release = {
       },
     })
   },
-  [`POST ${BASE_URL}/secured/create`]: (req, res) => {
+  [`POST ${BASE_URL}/contract/create`]: (req, res) => {
     console.log('---->', req.body)
     return res.json({
       ...obj,
@@ -36,26 +36,26 @@ const release = {
       },
     })
   },
-  [`POST ${BASE_URL}/secured/edit`]: (req, res) => {
+  [`POST ${BASE_URL}/contract/edit`]: (req, res) => {
     console.log('---->', req.body)
     return res.json({
       ...obj,
       data: {},
     })
   },
-  [`POST ${BASE_URL}/secured/detail`]: (req, res) => {
+  [`POST ${BASE_URL}/contract/detail`]: (req, res) => {
     console.log('---->', req.body)
     return res.json({
       ...obj,
       data: {
         id: 592813,
-        chain: 'trc20',
+        token: 'trc20',
         amount: 100,
         status: 1,
         deposit: 50,
         percent: 0.5,
-        owner: '@pkmp4',
-        partner: '',
+        user_a: '@pkmp4',
+        user_b: '',
         link: 'https://t.me?bot?start=123',
         content: ''
       },

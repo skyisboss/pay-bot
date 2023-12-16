@@ -122,7 +122,7 @@ const release = {
           return {
             id: index + 1,
             amount: Mock.mock('@integer(10000, 100000)'),
-            chain: Mock.mock('@pick(["trc20", "bep20", "erc20"])'),
+            token: Mock.mock('@pick(["trc20", "bep20", "erc20"])'),
             hbType: Mock.mock('@pick([0,1,2])'),
             created_at: Date.now(),
           }
@@ -137,7 +137,7 @@ const release = {
       data: {
         id: 1,
         amount: Mock.mock('@integer(10000, 100000)'),
-        chain: Mock.mock('@pick(["trc20", "bep20", "erc20"])'),
+        token: Mock.mock('@pick(["trc20", "bep20", "erc20"])'),
         status: Mock.mock('@pick([0, 1])'),
         create_at: Date.now(),
       },

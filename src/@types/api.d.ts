@@ -11,6 +11,8 @@ declare namespace ApiResult {
     fait_symbol: string
     currency: string
     invite_code: string
+    merchant: number
+    vending: number
     version: number
     created: string
     backup_account: string

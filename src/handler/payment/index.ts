@@ -21,13 +21,13 @@ export const PaymentView = async (ctx: BotContext) => {
   if (request.homePage) {
     restSceneInfo(ctx)
 
-    const api = await paymentAPI.index({ uid: ctx.session.userinfo!.id })
-    if (apiError(ctx, api)) {
-      return
-    }
+    // const api = await paymentAPI.index({ openid: ctx.session.userinfo!.openid })
+    // if (apiError(ctx, api)) {
+    //   return
+    // }
 
     const btn = new InlineKeyboard()
-    if (api.data?.id) {
+    if (ctx.session.userinfo?.merchant) {
       btn.text(ctx.t('paymentManage'), '/payment/manage?goto=index').row()
     } else {
       btn.text(ctx.t('paymentNew'), '/payment/manage?goto=create').row()
@@ -54,7 +54,7 @@ const ManageView = async (ctx: BotContext) => {
       btn.text(ctx.t('paymentAppWithdraw'), '/payment/manage?goto=withdraw').row()
       btn.text(ctx.t('goBack'), '/payment')
 
-      const api = await paymentAPI.index({ uid: ctx.session.userinfo!.id })
+      const api = await paymentAPI.index({ openid: ctx.session.userinfo!.openid })
       if (apiError(ctx, api)) {
         return
       }
@@ -74,17 +74,29 @@ const ManageView = async (ctx: BotContext) => {
       await display(ctx, msg, btn.inline_keyboard, true)
     },
     create: async () => {
-      await ctx.editMessageText(ctx.t('loading'))
-
-      const api = await paymentAPI.create({ uid: ctx.session.userinfo!.id })
-      if (apiError(ctx, api)) {
-        return
-      }
-
+      const confirm = request.params?.yes ?? 0
       const btn = new InlineKeyboard()
-      btn.text(ctx.t('paymentManage'), '/payment/manage?goto=index')
-      btn.text(ctx.t('goBack'), '/payment')
-      await display(ctx, ctx.t('paymentCreateSuccess'), btn.inline_keyboard, true)
+      if (confirm) {
+        // 2、执行创建操作
+        await ctx.editMessageText(ctx.t('loading'))
+
+        const api = await paymentAPI.create({ openid: ctx.session.userinfo!.openid })
+        if (apiError(ctx, api)) {
+          ctx.session.request.goto = ''
+          ctx.session.request.homePage = true
+          return PaymentView(ctx)
+        }
+
+        btn.text(ctx.t('paymentManage'), '/payment/manage?goto=index')
+        btn.text(ctx.t('goBack'), '/payment')
+        await display(ctx, ctx.t('paymentCreateSuccess'), btn.inline_keyboard, true)
+      } else {
+        // 1、显示创建条件
+
+        btn.text(ctx.t('confirm'), '/payment/manage?goto=create&yes=1')
+        btn.text(ctx.t('cancel'), '/payment')
+        await display(ctx, ctx.t('paymentCreateMsg'), btn.inline_keyboard, true)
+      }
     },
     token: async () => {
       const btn = new InlineKeyboard()
@@ -92,7 +104,7 @@ const ManageView = async (ctx: BotContext) => {
       btn.text(ctx.t('goBack'), '/payment/manage')
 
       const reset = request.params?.reset
-      const api = await paymentAPI.token({ uid: ctx.session.userinfo!.id, reset })
+      const api = await paymentAPI.token({ openid: ctx.session.userinfo!.openid, reset })
       if (apiError(ctx, api)) {
         return
       }
@@ -137,7 +149,7 @@ const ManageView = async (ctx: BotContext) => {
                 return await display(ctx, ctx.t('invalidInput'), btn.inline_keyboard)
               }
             }
-            const api = await paymentAPI.hook({ uid: ctx.session.userinfo!.id, hook: message })
+            const api = await paymentAPI.webhook({ openid: ctx.session.userinfo!.openid, webhook: message })
             if (apiError(ctx, api)) {
               return
             }
@@ -151,7 +163,7 @@ const ManageView = async (ctx: BotContext) => {
         }
       } else {
         ctx.session.onMessage = undefined
-        const api = await paymentAPI.hook({ uid: ctx.session.userinfo!.id })
+        const api = await paymentAPI.webhook({ openid: ctx.session.userinfo!.openid })
         if (apiError(ctx, api)) {
           return
         }
@@ -170,21 +182,21 @@ const ManageView = async (ctx: BotContext) => {
     more: async () => {
       const itemId = request.params?.id ?? ''
       const api = await paymentAPI.detail({
-        uid: ctx.session.userinfo!.id,
+        openid: ctx.session.userinfo!.openid,
         id: Number(itemId),
       })
       if (apiError(ctx, api)) {
         return
       }
 
-      const chain = getChainSymbol(ctx, api.data?.chain ?? '')
+      const chain = getChainSymbol(ctx, api.data?.token ?? '')
       const status = ['🕘 wait', '🟢 ok', '🔴 error'] //🟡
       const msg = ctx.t('paymentDetailMoreMsg', {
         time: format(api.data?.created_at ?? 0, 'MM/dd HH:ii'),
         amount: api.data?.amount ?? 0,
         chain: chain ?? '',
         status: status?.[api.data?.status ?? 0],
-        category: Number(api.data?.category ?? ''),
+        category: Number(api.data?.type ?? ''),
       })
       await ctx.answerCallbackQuery({
         show_alert: true,
@@ -204,10 +216,10 @@ const ManageView = async (ctx: BotContext) => {
 
       let pageInfo = ''
       if (category) {
-        const api = await paymentAPI.category({
-          uid: ctx.session.userinfo!.id,
+        const api = await paymentAPI.record({
+          openid: ctx.session.userinfo!.openid,
           page,
-          cate: Number(category),
+          item: Number(category),
         })
         if (apiError(ctx, api)) {
           return
@@ -215,7 +227,7 @@ const ManageView = async (ctx: BotContext) => {
         const rows = api.data?.rows ?? []
         rows.map(x => {
           const time = format(x?.created_at ?? 0, 'MM/dd HH:ii')
-          const chain = getChainSymbol(ctx, x?.chain ?? '')
+          const chain = getChainSymbol(ctx, x?.token ?? '')
           const title = `${time} | ${chain ?? '-'} | ${x.amount}`
           btn.text(title, `/payment/manage?goto=more&id=${x.id}`).row()
         })
@@ -236,7 +248,7 @@ const ManageView = async (ctx: BotContext) => {
       await display(ctx, msg + `\r\n\r\n` + pageInfo, btn.inline_keyboard, true)
     },
     withdraw: async () => {
-      const api = await paymentAPI.withdraw({ uid: ctx.session.userinfo!.id })
+      const api = await paymentAPI.withdraw({ openid: ctx.session.userinfo!.openid })
       console.log(api)
 
       if (apiError(ctx, api)) {

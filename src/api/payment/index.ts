@@ -3,14 +3,14 @@ import { makeRequest } from '@/http'
 
 export const paymentAPI = {
   /**查询是否已经开通支付 */
-  index: async (data: { uid: number }) => {
+  index: async (data: { openid: string }) => {
     return await makeRequest<PaymentApp>({
       method: 'post',
       url: '/payment/index',
       data,
     })
   },
-  create: async (data: { uid: number }) => {
+  create: async (data: { openid: string }) => {
     return await makeRequest<PaymentApp>({
       method: 'post',
       url: '/payment/create',
@@ -18,7 +18,7 @@ export const paymentAPI = {
     })
   },
   /**查看密钥 */
-  token: async (data: { uid: number; reset?: boolean }) => {
+  token: async (data: { openid: string; reset?: boolean }) => {
     return await makeRequest({
       method: 'post',
       url: '/payment/token',
@@ -26,15 +26,15 @@ export const paymentAPI = {
     })
   },
   /**查看hook */
-  hook: async (data: { uid: number; hook?: string }) => {
+  webhook: async (data: { openid: string; webhook?: string }) => {
     return await makeRequest({
       method: 'post',
-      url: '/payment/hook',
+      url: '/payment/webhook',
       data,
     })
   },
   /**申请提款 */
-  withdraw: async (data: { uid: number }) => {
+  withdraw: async (data: { openid: string }) => {
     return await makeRequest({
       method: 'post',
       url: '/payment/withdraw',
@@ -42,18 +42,18 @@ export const paymentAPI = {
     })
   },
   /**查看详情列表 */
-  category: async (data: { uid: number; page: number; cate: number }) => {
-    return await makeRequest<PaymentListItem, 'list'>({
+  record: async (data: { openid: string; page: number; item: number }) => {
+    return await makeRequest<PaymentRecord, 'list'>({
       method: 'post',
-      url: '/payment/detail/category',
+      url: '/payment/log/record',
       data,
     })
   },
   /**查看详情 */
-  detail: async (data: { uid: number; id: number }) => {
-    return await makeRequest<PaymentListItem>({
+  detail: async (data: { openid: string; id: number }) => {
+    return await makeRequest<PaymentRecord>({
       method: 'post',
-      url: '/payment/detail',
+      url: '/payment/log/detail',
       data,
     })
   },
@@ -77,11 +77,11 @@ interface PaymentApp {
   created_at: number
 }
 
-interface PaymentListItem {
+interface PaymentRecord {
   id: number
-  chain: string
+  type: string
+  token: string
   amount: string
-  category: string
   status: number
   created_at: number
 }

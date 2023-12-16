@@ -2,39 +2,56 @@ import { AnyObjetc } from '@/@types/types'
 import { makeRequest } from '@/http'
 
 export const securedAPI = {
-  index: async (data: { uid: number }) => {
+  index: async (data: { openid: string; cate: number; page: number }) => {
     return await makeRequest<SecuredItem, 'list'>({
       method: 'post',
-      url: '/secured/index',
+      url: '/contract/index',
       data,
     })
   },
-  create: async (data: { uid: number; coin: string; deposit: string; amount: string }) => {
+  create: async (data: { openid: string; token: string; deposit: string; amount: string; percent: number }) => {
     return await makeRequest({
       method: 'post',
-      url: '/secured/create',
+      url: '/contract/create',
       data,
     })
   },
-  edit: async (data: { uid: number; post?: AnyObjetc }) => {
+  // edit: async (data: { openid: string; post?: AnyObjetc }) => {
+  //   return await makeRequest({
+  //     method: 'post',
+  //     url: '/contract/edit',
+  //     data,
+  //   })
+  // },
+  edit: async (data: { openid: string; id: number; action: EditAction; info?: string }) => {
     return await makeRequest({
       method: 'post',
-      url: '/secured/edit',
+      url: '/contract/edit',
       data,
     })
   },
-  detail: async (data: { uid: number; id: number }) => {
+  detail: async (data: { openid: string; id: number }) => {
     return await makeRequest<SecuredItem>({
       method: 'post',
-      url: '/secured/detail',
+      url: '/contract/detail',
       data,
     })
   },
 }
 
+type EditAction =
+  | 'content'
+  | 'join'
+  | 'close'
+  | 'delivery'
+  | 'delivery2'
+  | 'receive'
+  | 'receive2'
+  | 'payment'
+  | 'payment2'
 interface SecuredItem {
   id: number
-  chain: string
+  token: string
   amount: number
   status: number
   deposit: number

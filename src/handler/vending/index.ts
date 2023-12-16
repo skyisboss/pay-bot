@@ -1,6 +1,7 @@
 import { AnyObjetc, BotContext } from '@/@types/types'
-import { vendingAPI } from '@/api/vending'
+import { ShopInfo, vendingAPI } from '@/api/vending'
 import {
+  SessionVersion,
   apiError,
   checkScene,
   clearLastMessage,
@@ -18,25 +19,33 @@ export const VendingView = async (ctx: BotContext) => {
 
   if (request.homePage) {
     restSceneInfo(ctx)
-    const api = await vendingAPI.index({ uid: ctx.session.userinfo!.id })
-    if (apiError(ctx, api)) {
-      return
-    }
-
+    let msg = ''
     const btn = new InlineKeyboard()
-    btn.text(ctx.t('vendingManage'), '/vending/manage?goto=index')
-    btn.text(ctx.t('vendingPublish'), '/vending/manage?goto=add').row()
-    btn.text(ctx.t('vendingSetting'), '/vending/manage?goto=setting').row()
-    btn.text(ctx.t('goBack'), '/start?rep=1')
-    const msg = ctx.t('vendingHomeMsg', {
-      count1: api.data?.count?.count1 ?? 0,
-      count2: api.data?.count?.count2 ?? 0,
-      trc20: api.data?.amount?.trc20 ?? 0,
-      erc20: api.data?.amount?.erc20 ?? 0,
-      bep20: api.data?.amount?.bep20 ?? 0,
-      link: api.data?.link ?? '',
-      status: api.data?.status ?? -1,
-    })
+    const vendingStatus = ctx.session.userinfo?.vending ?? 0
+    if (vendingStatus) {
+      const api = await vendingAPI.index({ openid: ctx.session.userinfo!.openid })
+      if (apiError(ctx, api)) {
+        return
+      }
+
+      btn.text(ctx.t('vendingManage'), '/vending/manage?goto=index')
+      btn.text(ctx.t('vendingPublish'), '/vending/manage?goto=add').row()
+      btn.text(ctx.t('vendingSetting'), '/vending/setting?goto=index').row()
+      btn.text(ctx.t('goBack'), '/start?rep=1')
+      msg = ctx.t('vendingHomeMsg', {
+        count1: api.data?.goods_count ?? 0,
+        count2: api.data?.sales_count ?? 0,
+        trc20: api.data?.balance?.trc20 ?? 0,
+        erc20: api.data?.balance?.erc20 ?? 0,
+        bep20: api.data?.balance?.bep20 ?? 0,
+        link: api.data?.link ?? '',
+        status: api.data?.status ?? -1,
+      })
+    } else {
+      btn.text(ctx.t('vendingCreate'), '/vending/manage?goto=create').row()
+      btn.text(ctx.t('goBack'), '/start?rep=1')
+      msg = ctx.t('vendingMsg')
+    }
 
     await display(ctx, msg, btn.inline_keyboard, true)
   } else {
@@ -75,7 +84,7 @@ const ManageView = async (ctx: BotContext) => {
     index: async () => {
       ctx.session.onMessage = undefined
       const page = request.params?.page || 1
-      const api = await vendingAPI.goods({ uid: ctx.session.userinfo!.id, page: page })
+      const api = await vendingAPI.goods({ openid: ctx.session.userinfo!.openid, page: page })
       if (!api?.success || !api?.data) {
         return await showServerStop(ctx)
       }
@@ -99,6 +108,20 @@ const ManageView = async (ctx: BotContext) => {
         totalPage: totalPage,
       })
       await display(ctx, msg + `\r\n\r\n` + pageInfo, btn.inline_keyboard, true)
+    },
+    create: async () => {
+      const api = await vendingAPI.create({ openid: ctx.session.userinfo!.openid })
+      if (apiError(ctx, api)) {
+        return
+      }
+      await ctx.answerCallbackQuery({
+        text: ctx.t('vendingSettingSuccess'),
+        show_alert: true,
+      })
+      ctx.session.request.params['goto'] = ''
+      ctx.session.request.homePage = true
+      ctx.session.userinfo!['vending'] = 1
+      return await VendingView(ctx)
     },
     add: async () => {
       const btn = new InlineKeyboard()
@@ -136,11 +159,16 @@ const ManageView = async (ctx: BotContext) => {
       const page = request.params?.page || 1
       const btn = new InlineKeyboard()
       btn.text(ctx.t('cancel'), `/vending/manage?goto=detail&id=${id}&page=${page}`)
+
+      const api = await vendingAPI.detail({ openid: ctx.session.userinfo!.openid, id })
+      if (apiError(ctx, api)) {
+        return
+      }
       const msg = ctx.t('vendingGoodsMsg', {
-        title: 'vip会员',
-        price: '100',
-        desc: '试用3天',
-        kami: '账号jkhas 卡密1231231',
+        title: api.data?.title ?? '',
+        price: api.data?.price ?? '',
+        desc: api.data?.describe ?? '',
+        kami: api.data?.content ?? '',
         step: 1,
         action: 1,
       })
@@ -180,14 +208,12 @@ const ManageView = async (ctx: BotContext) => {
       const { id, title, price, desc, kami, actionType } = ctx.session.scene.params
       if (confirm) {
         const api = await vendingAPI.edit({
-          uid: ctx.session.userinfo!.id,
-          goods: {
-            id,
-            title,
-            price,
-            desc,
-            kami,
-          },
+          openid: ctx.session.userinfo!.openid,
+          id: Number(id) || 0,
+          title,
+          price: Number(price) || 0,
+          describe: desc,
+          content: kami,
         })
         if (apiError(ctx, api)) {
           return
@@ -218,8 +244,13 @@ const ManageView = async (ctx: BotContext) => {
       const page = request.params?.page || 1
       const confirm = request.params?.yes || 0
       const btn = new InlineKeyboard()
+
+      const api = await vendingAPI.detail({ openid: ctx.session.userinfo!.openid, id })
+      if (apiError(ctx, api)) {
+        return
+      }
       if (confirm) {
-        const api = await vendingAPI.delete({ uid: ctx.session.userinfo!.id, id })
+        const api = await vendingAPI.delete({ openid: ctx.session.userinfo!.openid, id })
         if (apiError(ctx, api)) {
           return
         }
@@ -227,7 +258,7 @@ const ManageView = async (ctx: BotContext) => {
         btn.text(ctx.t('goBack'), `/vending/manage?goto=index&page=${page}`)
         const msg = ctx.t('vendingGoodsDeleteMsg', {
           step: 1,
-          title: 'asdadaxxxadass商品标题',
+          title: api.data?.title ?? '',
         })
         await display(ctx, msg, btn.inline_keyboard, true)
       } else {
@@ -235,7 +266,7 @@ const ManageView = async (ctx: BotContext) => {
         btn.text(ctx.t('cancel'), `/vending/manage?goto=index&page=${page}`)
         const msg = ctx.t('vendingGoodsDeleteMsg', {
           step: 0,
-          title: 'asdadaxxxadass商品标题',
+          title: api.data?.title ?? '',
         })
 
         await display(ctx, msg, btn.inline_keyboard, true)
@@ -250,7 +281,7 @@ const ManageView = async (ctx: BotContext) => {
       btn.text(ctx.t('vending'), `/vending/`).row()
       btn.text(ctx.t('goBack'), `/vending/manage?goto=index&page=${page}`)
 
-      const api = await vendingAPI.detail({ uid: ctx.session.userinfo!.id, id })
+      const api = await vendingAPI.detail({ openid: ctx.session.userinfo!.openid, id })
       if (apiError(ctx, api)) {
         return
       }
@@ -258,71 +289,159 @@ const ManageView = async (ctx: BotContext) => {
       const msg = ctx.t('vendingGoodsDetailMsg', {
         title: api.data?.title ?? '',
         price: api.data?.price ?? '',
-        desc: api.data?.desc ?? '',
-        kami: api.data?.kami ?? '',
+        desc: api.data?.describe ?? '',
+        kami: api.data?.content ?? '',
         views: api.data?.views ?? '',
         sales: api.data?.sales ?? '',
-        time: format(api.data?.created_at ?? 0, 'yyyy-MM-dd HH:ii'),
+        time: format(new Date(api.data?.created_at ?? ''), 'yyyy-MM-dd HH:ii'),
       })
       await display(ctx, msg, btn.inline_keyboard, true)
     },
-    setting: async () => {
-      ctx.session.onMessage = undefined
-      const btn = new InlineKeyboard()
-      const action = request.params?.action ?? ''
-      if (action) {
-        if (action === '1') {
-          btn.text(ctx.t('goBack'), '/vending/manage?goto=setting')
-          await display(ctx, ctx.t('vendingSettingMsg', { step: 1 }), btn.inline_keyboard, true)
-          ctx.session.onMessage = {
-            name: 'input-vending-name',
-            time: Date.now(),
-            call: async ctx => {
-              const message = (ctx.message?.text ?? '').trim()
-              if (!message) {
-                return await invalidInput(ctx, '/vending')
-              }
-              const api = await vendingAPI.setting({ uid: ctx.session.userinfo!.id, name: message || '' })
-              if (apiError(ctx, api)) {
-                return
-              }
+  }
 
-              ctx.session.request.views = ['vending', 'manage']
-              ctx.session.request.goto = 'setting'
-              ctx.session.request.params['rep'] = 0
-              ctx.session.request.params['action'] = ''
-              await clearLastMessage(ctx)
-              await ManageView(ctx)
-            },
+  // 执行方法
+  await actions?.[request.goto]?.()
+}
+
+const SettingView = async (ctx: BotContext) => {
+  const request = ctx.session.request
+  const scene = ctx.session.scene
+
+  const actions: AnyObjetc = {
+    index: async () => {
+      ctx.session.onMessage = undefined
+      const version = SessionVersion(ctx)
+      const api = await vendingAPI.index({ openid: ctx.session.userinfo!.openid })
+      if (apiError(ctx, api)) {
+        return
+      }
+
+      const btn = new InlineKeyboard()
+      btn.text(ctx.t('vendingSettingName'), '/vending/setting?goto=name').row()
+      btn.text(ctx.t('vendingSettingDescribe'), '/vending/setting?goto=describe').row()
+      btn.text(ctx.t('vendingSettingPayment'), '/vending/setting?goto=payment').row()
+      const status = api.data?.status ?? 0 ? 0 : 1
+      btn.text(ctx.t('vendingSettingStatus', { status }), `/vending/setting?goto=status&status=${status}`).row()
+      btn.text(ctx.t('goBack'), `/vending?v=${version}`)
+      const rep = ctx.session.request.params?.rep ?? 1
+
+      const msg = ctx.t('vendingSettingMsg', {
+        name: api.data?.name || ctx.t('vendingUnSetting'),
+        describe: api.data?.describe || ctx.t('vendingUnSetting'),
+        status: api.data?.status ? ctx.t('vendingStatusOpen') : ctx.t('vendingStatusClose'),
+        payment: 'USDT » (' + (api.data?.payment ?? []).map(x => x.toUpperCase()).join() + ')',
+      })
+      await display(ctx, msg, btn.inline_keyboard, !!rep)
+    },
+    name: async () => {
+      const btn = new InlineKeyboard()
+      btn.text(ctx.t('goBack'), '/vending/setting?goto=index')
+      await display(ctx, ctx.t('vendingSettingTypeMsg', { type: 1 }), btn.inline_keyboard, true)
+      ctx.session.onMessage = {
+        name: 'input-vending-name',
+        time: Date.now(),
+        call: async ctx => {
+          const message = (ctx.message?.text ?? '').trim()
+          if (!message) {
+            return await invalidInput(ctx, '/vending')
           }
-        }
-        if (action === '2') {
-          const status = ctx.session.request.params?.status
-          const api = await vendingAPI.setting({ uid: ctx.session.userinfo!.id, status: status })
+          const api = await vendingAPI.setting({
+            openid: ctx.session.userinfo!.openid,
+            action: 'name',
+            value: message,
+          })
           if (apiError(ctx, api)) {
             return
           }
-          await ctx.answerCallbackQuery({
-            text: ctx.t('vendingSettingSuccess'),
-            show_alert: true,
+
+          ctx.session.request.views = ['vending', 'setting']
+          ctx.session.request.goto = 'index'
+          ctx.session.request.params['rep'] = 0
+          await clearLastMessage(ctx)
+          await actions.index()
+        },
+      }
+    },
+    describe: async () => {
+      const btn = new InlineKeyboard()
+      btn.text(ctx.t('goBack'), '/vending/setting?goto=index')
+      await display(ctx, ctx.t('vendingSettingTypeMsg', { type: 2 }), btn.inline_keyboard, true)
+      ctx.session.onMessage = {
+        name: 'input-vending-describe',
+        time: Date.now(),
+        call: async ctx => {
+          const message = (ctx.message?.text ?? '').trim()
+          if (!message) {
+            return await invalidInput(ctx, '/vending')
+          }
+          const api = await vendingAPI.setting({
+            openid: ctx.session.userinfo!.openid,
+            action: 'describe',
+            value: message,
           })
-          ctx.session.request.params['action'] = ''
-          actions.setting()
-        }
-      } else {
-        const api = await vendingAPI.index({ uid: ctx.session.userinfo!.id })
+          if (apiError(ctx, api)) {
+            return
+          }
+
+          ctx.session.request.views = ['vending', 'setting']
+          ctx.session.request.goto = 'index'
+          ctx.session.request.params['rep'] = 0
+          await clearLastMessage(ctx)
+          await actions.index()
+        },
+      }
+    },
+    payment: async () => {
+      // `◉ ` : `○ ` ☑□
+      const token = request.params?.token ?? ''
+      let api: any
+      if (token) {
+        api = await vendingAPI.setting({
+          openid: ctx.session.userinfo!.openid,
+          action: 'payment',
+          value: token,
+        })
         if (apiError(ctx, api)) {
           return
         }
-
-        btn.text(ctx.t('vendingSettingName'), '/vending/manage?goto=setting&action=1').row()
-        btn
-          .text(ctx.t('vendingSettingStatus'), `/vending/manage?goto=setting&action=2&status=${api.data?.status}`)
-          .row()
-        btn.text(ctx.t('goBack'), '/vending')
-        const rep = ctx.session.request.params?.rep ?? 1
-        await display(ctx, ctx.t('vendingSettingMsg', { step: 0 }), btn.inline_keyboard, !!rep)
+      } else {
+        api = await vendingAPI.baseinfo({ openid: ctx.session.userinfo!.openid })
+        if (apiError(ctx, api)) {
+          return
+        }
       }
+
+      const btn = new InlineKeyboard()
+      const version = SessionVersion(ctx)
+      const blockchain = ctx.session.config?.blockchain ?? []
+      blockchain.map(x => {
+        const symbol = x.symbol
+        const token = x.token
+        const select = api.data?.payment?.includes(token) ? '◉' : '○'
+        const text = `${token.toUpperCase()} · ${symbol.toUpperCase()} ${select}`
+        btn.text(text, `/vending/setting?goto=payment&token=${token}&v=${version}`).row()
+      })
+
+      btn.text(ctx.t('goBack'), '/vending/setting?goto=index')
+      await display(ctx, ctx.t('vendingSettingTypeMsg', { type: 3 }), btn.inline_keyboard, true)
+    },
+    status: async () => {
+      const status = Number(request.params?.status ?? 0)
+      const api = await vendingAPI.setting({
+        openid: ctx.session.userinfo!.openid,
+        action: 'status',
+        value: status.toString(),
+      })
+      if (apiError(ctx, api)) {
+        return
+      }
+
+      ctx.answerCallbackQuery({
+        text: ctx.t('vendingSettingSuccess'),
+        show_alert: true,
+      })
+      ctx.session.request.goto = 'index'
+      await SettingView(ctx)
     },
   }
 
@@ -331,4 +450,5 @@ const ManageView = async (ctx: BotContext) => {
 }
 const views: AnyObjetc = {
   manage: ManageView,
+  setting: SettingView,
 }

@@ -122,7 +122,7 @@ interface RateRes {
 
 interface HistoryItem {
   id: number
-  chain: string
+  token: string
   amount: string
   hbType?: string
   created_at: number

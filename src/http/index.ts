@@ -1,3 +1,4 @@
+import { BotContext } from '@/@types/types'
 import { logger } from '@/logger'
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import dotenv from 'dotenv'
@@ -93,6 +94,11 @@ interface IResponseRows<T = any> extends Omit<IResponse, 'data'> {
  * @param config
  * @returns
  */
-export function makeRequest<T = any, R = undefined>(config: AxiosRequestConfig & { noToast?: boolean }) {
+export function makeRequest<T = any, R = undefined>(
+  config: AxiosRequestConfig & { noToast?: boolean },
+  ctx?: BotContext,
+) {
+  // 设置token
+  // instance.defaults.headers['x-token2'] = `Bearer 2`
   return instance.request<T, R extends 'list' ? IResponseRows<T> : IResponse<T>>(config)
 }

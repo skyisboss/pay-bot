@@ -23,7 +23,7 @@ export const ContractView = async (ctx: BotContext) => {
 
     const btn = new InlineKeyboard()
     btn.text(ctx.t('securedManage'), '/contract/manage?goto=index')
-    btn.text(ctx.t('securedAdd'), '/contract/manage?goto=create').row()
+    btn.text(ctx.t('securedAdd'), '/contract/manage?goto=terms&jump=create').row()
     btn.text(`⚠️ ` + ctx.t('securedAgreement'), '/contract/manage?goto=terms').row()
     btn.text(ctx.t('goBack'), '/start?rep=1')
 
@@ -46,17 +46,18 @@ const ManageView = async (ctx: BotContext) => {
 
       const btn = new InlineKeyboard()
       const cate = Number(request.params?.cate ?? 0)
+      const page = request.params?.page ?? 1
       const securedMine = cate === 1 ? `◉ ` : `○ `
       const securedJoin = cate === 2 ? `◉ ` : `○ `
       const version = SessionVersion(ctx)
-      btn.text(`${securedMine}` + ctx.t('securedMine'), `/contract/manage?cate=1&v=${version}`)
-      btn.text(`${securedJoin}` + ctx.t('securedJoin'), `/contract/manage?cate=2&v=${version}`).row()
+      btn.text(`${securedMine}` + ctx.t('securedMine'), `/contract/manage?cate=1&v=${version}&page=${page}`)
+      btn.text(`${securedJoin}` + ctx.t('securedJoin'), `/contract/manage?cate=2&v=${version}&page=${page}`).row()
 
       let pageInfo = ''
       let totalCount = 0
       if (cate) {
         const page = request.params?.page || 1
-        const api = await securedAPI.index({ uid: ctx.session.userinfo!.id })
+        const api = await securedAPI.index({ openid: ctx.session.userinfo!.openid, cate, page })
         if (apiError(ctx, api)) {
           return
         }
@@ -65,7 +66,7 @@ const ManageView = async (ctx: BotContext) => {
           const rows = api?.data?.rows ?? []
           const statusText = [ctx.t('securedStatusPending'), ctx.t('securedStatusProgress')]
           rows.map(x => {
-            const symbol = getChainSymbol(ctx, x.chain) ?? ''
+            const symbol = getChainSymbol(ctx, x.token) ?? ''
             const status = statusText[x.status]
             const title = `${status} | ${symbol} | ${x.amount}`
             btn.text(title, `/contract/manage?goto=detail&cate=${cate}&id=${x.id}&page=${page}`).row()
@@ -146,9 +147,9 @@ const ManageView = async (ctx: BotContext) => {
                   text = eth.toFixed(2)
               }
               if (i % 2 == 0) {
-                btn.text(`${e * 100}% (${text})`, `/contract/manage?goto=review&deposit=${e}`)
+                btn.text(`${e * 100}% (${text})`, `/contract/manage?goto=review&percent=${e}`)
               } else {
-                btn.text(`${e * 100}% (${text})`, `/contract/manage?goto=review&deposit=${e}`).row()
+                btn.text(`${e * 100}% (${text})`, `/contract/manage?goto=review&percent=${e}`).row()
               }
             })
 
@@ -214,13 +215,15 @@ const ManageView = async (ctx: BotContext) => {
     review: async () => {
       const coin = ctx.session.scene.params?.coin
       const amount = ctx.session.scene.params?.amount
-      const deposit = ctx.session.request.params?.deposit ?? ctx.session.scene.params?.deposit
+      const percent = ctx.session.request.params?.percent ?? ctx.session.scene.params?.percent ?? 0
+      const deposit = Number(amount) * Number(percent)
       if (request.params?.yes) {
         const api = await securedAPI.create({
-          uid: ctx.session.userinfo!.id,
-          coin,
+          openid: ctx.session.userinfo!.openid,
+          token: coin,
           amount,
-          deposit,
+          deposit: String(deposit),
+          percent,
         })
         if (apiError(ctx, api)) {
           return
@@ -237,12 +240,12 @@ const ManageView = async (ctx: BotContext) => {
         btn.text(ctx.t('confirm'), `/contract/manage?goto=review&yes=1`)
         btn.text(ctx.t('cancel'), '/contract?rep=1')
 
-        ctx.session.scene.params['deposit'] = deposit
+        ctx.session.scene.params['percent'] = percent
         const msg = ctx.t('securedAddMsg', {
           step: 3,
           amount,
           symbol: getChainSymbol(ctx, coin) ?? '',
-          deposit: Number(amount) * parseFloat(deposit),
+          deposit: Number(amount) * parseFloat(percent),
         })
         await display(ctx, msg, btn.inline_keyboard, true)
       }
@@ -254,7 +257,7 @@ const ManageView = async (ctx: BotContext) => {
       const page = Number(request.params?.page ?? 1)
       const rep = request.params?.rep ?? '1'
 
-      const api = await securedAPI.detail({ uid: ctx.session.userinfo!.id, id })
+      const api = await securedAPI.detail({ openid: ctx.session.userinfo!.openid, id })
       if (apiError(ctx, api)) {
         return
       }
@@ -298,7 +301,7 @@ const ManageView = async (ctx: BotContext) => {
         id: (api.data?.id ?? '').toString(),
         step: status,
         content: api.data?.content || ctx.t('securedManageCompleteContent'),
-        chain: getChainSymbol(ctx, api.data?.chain ?? '') ?? '',
+        chain: getChainSymbol(ctx, api.data?.token ?? '') ?? '',
         amount: api.data?.amount ?? '',
         deposit: api.data?.deposit ?? '',
         percent: api.data?.percent ?? '',
@@ -329,11 +332,10 @@ const ManageView = async (ctx: BotContext) => {
                 return await invalidInput(ctx, '/contract/manage/', ctx.t('invalidAmount'))
               }
               const api = await securedAPI.edit({
-                uid: ctx.session.userinfo!.id,
-                post: {
-                  id,
-                  content: message,
-                },
+                openid: ctx.session.userinfo!.openid,
+                id,
+                action: 'content',
+                info: message,
               })
               if (apiError(ctx, api)) {
                 return
@@ -351,11 +353,10 @@ const ManageView = async (ctx: BotContext) => {
           break
         case 'join':
           const api = await securedAPI.edit({
-            uid: ctx.session.userinfo!.id,
-            post: {
-              id,
-              join: ctx.session.userinfo?.id,
-            },
+            openid: ctx.session.userinfo!.openid,
+            id,
+            action: 'join',
+            info: id,
           })
           if (apiError(ctx, api)) {
             return
@@ -366,11 +367,10 @@ const ManageView = async (ctx: BotContext) => {
         case 'close':
           if (request.params?.yes) {
             const api = await securedAPI.edit({
-              uid: ctx.session.userinfo!.id,
-              post: {
-                id,
-                close: id,
-              },
+              openid: ctx.session.userinfo!.openid,
+              id,
+              action: 'close',
+              info: id,
             })
             if (apiError(ctx, api)) {
               return
@@ -391,11 +391,10 @@ const ManageView = async (ctx: BotContext) => {
         case 'delivery':
           {
             const api = await securedAPI.edit({
-              uid: ctx.session.userinfo!.id,
-              post: {
-                id,
-                delivery: id,
-              },
+              openid: ctx.session.userinfo!.openid,
+              id,
+              action: 'delivery',
+              info: id,
             })
             if (apiError(ctx, api)) {
               return
@@ -408,11 +407,10 @@ const ManageView = async (ctx: BotContext) => {
         case 'delivery2':
           {
             const api = await securedAPI.edit({
-              uid: ctx.session.userinfo!.id,
-              post: {
-                id,
-                delivery2: id,
-              },
+              openid: ctx.session.userinfo!.openid,
+              id,
+              action: 'delivery2',
+              info: id,
             })
             if (apiError(ctx, api)) {
               return
@@ -426,11 +424,10 @@ const ManageView = async (ctx: BotContext) => {
         case 'receive':
           {
             const api = await securedAPI.edit({
-              uid: ctx.session.userinfo!.id,
-              post: {
-                id,
-                receive: id,
-              },
+              openid: ctx.session.userinfo!.openid,
+              id,
+              action: 'receive',
+              info: id,
             })
             if (apiError(ctx, api)) {
               return
@@ -443,11 +440,10 @@ const ManageView = async (ctx: BotContext) => {
         case 'receive2':
           {
             const api = await securedAPI.edit({
-              uid: ctx.session.userinfo!.id,
-              post: {
-                id,
-                receive2: id,
-              },
+              openid: ctx.session.userinfo!.openid,
+              id,
+              action: 'receive2',
+              info: id,
             })
             if (apiError(ctx, api)) {
               return
@@ -461,11 +457,10 @@ const ManageView = async (ctx: BotContext) => {
         case 'payment':
           {
             const api = await securedAPI.edit({
-              uid: ctx.session.userinfo!.id,
-              post: {
-                id,
-                payment: id,
-              },
+              openid: ctx.session.userinfo!.openid,
+              id,
+              action: 'payment',
+              info: id,
             })
             if (apiError(ctx, api)) {
               return
@@ -478,11 +473,10 @@ const ManageView = async (ctx: BotContext) => {
         case 'payment2':
           {
             const api = await securedAPI.edit({
-              uid: ctx.session.userinfo!.id,
-              post: {
-                id,
-                payment2: id,
-              },
+              openid: ctx.session.userinfo!.openid,
+              id,
+              action: 'payment2',
+              info: id,
             })
             if (apiError(ctx, api)) {
               return

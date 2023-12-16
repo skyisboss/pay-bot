@@ -500,13 +500,14 @@ export const HistoryView = async (ctx: BotContext) => {
       const btn = new InlineKeyboard()
       const typeList = [ctx.t('hongbao1'), ctx.t('hongbao2'), ctx.t('hongbao3')]
       api?.data?.rows?.map(x => {
-        let showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${x.chain} · 💎${x.amount}`
+        let showText = ''
         // 红包
-        // if (3 === item) {
-        //   showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${typeList?.[Number(x?.hbType)]}(💎${x.amount})`
-        // } else {
-        //   showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${x.chain} · 💎${x.amount}`
-        // }
+        if (3 === item) {
+          // showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${typeList?.[Number(x?.hbType)]}(💎${x.amount})`
+          showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${x.token} · 🧧${x.amount}`
+        } else {
+          showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${x.token} · 💎${x.amount}`
+        }
         btn.text(showText, `/wallet/history?goto=detail&item=${item}&id=${x.id}`).row()
       })
       const totalItem = api?.data?.total ?? 0
@@ -544,8 +545,8 @@ export const HistoryView = async (ctx: BotContext) => {
       const msg = ctx.t('depositHistoryDetail', {
         time: time,
         amount: apiRes?.data?.amount,
-        chain: apiRes?.data?.chain,
-        status: status?.[apiRes?.data?.status],
+        token: apiRes?.data?.token,
+        status: status?.[apiRes?.data?.status ?? 0],
       })
       await ctx.answerCallbackQuery({
         show_alert: true,

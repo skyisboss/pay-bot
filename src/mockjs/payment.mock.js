@@ -14,7 +14,7 @@ const release = {
     return res.json({
       ...obj,
       data: {
-        id: 123
+        // id: 123
         // created: Mock.mock('@pick([false, true])')
       },
     })
@@ -23,6 +23,8 @@ const release = {
     console.log('---->', req.params)
     return res.json({
       ...obj,
+      // err: 1,
+      // msg: '前置条件不符合',
       data: {
         // created: Mock.mock('@pick([false, true])')
       },
@@ -37,7 +39,7 @@ const release = {
       },
     })
   },
-  [`POST ${BASE_URL}/payment/hook`]: (req, res) => {
+  [`POST ${BASE_URL}/payment/webhook`]: (req, res) => {
     console.log('---->', req.params)
     return res.json({
       ...obj,
@@ -47,7 +49,7 @@ const release = {
     })
   },
   [`POST ${BASE_URL}/payment/withdraw`]: (req, res) => {
-    console.log('---->', req.params)
+    console.log('---->', req.body)
     return res.json({
       ...obj,
       // success: false,
@@ -55,7 +57,7 @@ const release = {
       data: {},
     })
   },
-  [`POST ${BASE_URL}/payment/detail/category`]: (req, res) => {
+  [`POST ${BASE_URL}/payment/log/record`]: (req, res) => {
     console.log('---->', req.params)
     return res.json({
       ...obj,
@@ -65,26 +67,26 @@ const release = {
         rows: new Array(5).fill('').map( (item, index) => { 
           return {
             id: index + 1,
-            chain: Mock.mock('@pick(["bep20","erc20","trc20"])'),
+            type: Mock.mock('@pick([1,2])'),
+            token: Mock.mock('@pick(["bep20","erc20","trc20"])'),
             amount: Mock.mock('@integer(10000, 100000)'),
             status: Mock.mock('@pick([0,1])'),
-            category: Mock.mock('@pick([1,2])'),
             created_at: Date.now()
           } 
         })
       },
     })
   },
-  [`POST ${BASE_URL}/payment/detail`]: (req, res) => {
+  [`POST ${BASE_URL}/payment/log/detail`]: (req, res) => {
     console.log('---->', req.params)
     return res.json({
       ...obj,
       data: {
         id: 1,
-        chain: Mock.mock('@pick(["bep20","erc20","trc20"])'),
+        type: Mock.mock('@pick([1,2])'),
+        token: Mock.mock('@pick(["bep20","erc20","trc20"])'),
         amount: Mock.mock('@integer(10000, 100000)'),
         status: Mock.mock('@pick([0,1])'),
-        category: Mock.mock('@pick([1,2])'),
         created_at: Date.now()
       },
     })
