@@ -20,9 +20,19 @@ const ViewsObject: AnyObjetc = {
   contract: ContractView,
 }
 export const useHandler = async (bot: MyBot) => {
-  // 开始页面
+  // 启动页面
   bot.command('start', async ctx => {
     ctx.session.request.views = ['start']
+    if (ctx.match) {
+      // 'hB3Rymy'.split('', 1) => ['h']
+      const [action] = ctx.match.split('', 1)
+      // h-红包， i-邀请码，v-店铺，g-商品， p-支付，c-担保交易
+
+      if (action === 'h') {
+        const request = parseCallbackQuery(compress.decode(`/wallet/hongbao?goto=claim&link=${ctx.match}`))
+        ctx.session.request = request
+      }
+    }
     await callBotView(ctx)
   })
 
@@ -186,12 +196,4 @@ const callBotView = async (ctx: BotContext) => {
   const request = ctx.session.request
 
   await ViewsObject?.[request.views?.[0]]?.(ctx)
-
-  // const viewName = callbackQuery.views?.[0] ?? ''
-  // await ViewsObject?.[viewName as keyof Tg.AnyObjetc]?.(ctx)
-  // try {
-  //   // await viewObj[callbackQuery.views[0] as keyof Tg.AnyObjetc](ctx)
-  // } catch (error) {
-  //   logger.error('err', error)
-  // }
 }

@@ -108,20 +108,18 @@ transferCreate = 创建转账
 transferBalanceFail = ⚠️ <b>{$symbol}</b> 余额不足
 transferInfo = 
     { NUMBER($step) ->
-        *[1] 币种: {$chain}
+        *[1] 币种: {$token}
 
-        [2] 币种: {$chain}
+        [2] 币种: {$token}
             金额: {$amount}
 
-        [3] 币种: {$chain}
+        [3] 币种: {$token}
             金额: {$amount}
-            收款人: {$payee}
-            {$payee_name}
+            收款人: {$touser}
 
-        [4] 币种: {$chain}
+        [4] 币种: {$token}
             金额: {$amount}
-            收款人: {$payee}
-            {$payee_name}
+            收款人: {$touser}
     }
 transferActionMsg = 
     <b>{wallet}</b> » {transfer}
@@ -129,7 +127,7 @@ transferActionMsg =
     { NUMBER($step) ->
         *[0]
         
-        · 转账实时到账,无需手续费.
+        · 即时到账 无手续费
         
         <b>👇 请选择转账的币种:</b>
         [1] 
@@ -229,6 +227,14 @@ depositHistoryDetail =
     金额: {$amount}
     ------------------------
     状态: {$status}
+hongbaoHistoryDetail = 
+    {$name} 
+    
+    {$time}
+    ------------------------
+    金额: {$amount} U · {$token}
+    ------------------------
+    已领取({$claim}/{$total})
 ## ============================
 # 红包
 hongbao1 = 🧧 普通红包 
@@ -238,133 +244,117 @@ hongbaoOtherAmount = ✏️ 输入金额
 hongbaoBalanceFail = 余额不足
 hongbaoInputFail = 无效输入
 hongbaoUserFail = 用户不存在
-hongbaoBase = 
+hongbaoUserSelfFail = 不能发送给自己
+
+hongbaoClaim = 🧧 立即领取
+hongbaoClaimMsg = 
+    { NUMBER($step) ->
+        *[0] 
+        <b>{$name}</b>
+        {""}
+        [1] 
+        <b>✅ 领取成功</b>
+        {""}
+        <b>· 类型: {$name}</b>
+    }
+    <b>· 币种: {$token}</b>
+    <b>· 金额: {$amount}</b>
+    { NUMBER($type) ->
+        *[0] {""}
+        [1]
+        <b>· 专属: {$user}</b>
+        {""}
+    }
+    ⚠️ 领取后资金自动存入钱包余额
+
+hongbaoInfo = 
     { NUMBER($step) ->
         *[1]
         · 类型: {$name}
         [2]
         · 类型: {$name}
         · 币种: {$chain}
-
         [3]
         · 类型: {$name}
         · 币种: {$chain}
-        · 金额: {$amount}
-        { NUMBER($type) ->
-            *[0]DELETE_EMPTY_STRING
-            [1]· 专属: {$user}
-            [2]· 拼手气: {$split}
-        }
-
         [4]
         · 类型: {$name}
         · 币种: {$chain}
         · 金额: {$amount}
-        { NUMBER($type) ->
-            *[0]DELETE_EMPTY_STRING
-            [1]· 专属: {$user}
-            [2]· 拼手气: {$split}
-        }
-
-        [20]
-        · 类型: {$name}
-        · 币种: {$chain}
-        [21]
+        [5]
         · 类型: {$name}
         · 币种: {$chain}
         · 金额: {$amount}
-        [22]
+        [6]
+        · 类型: {$name}
+        · 币种: {$chain}
+        · 金额: {$amount}
+        [7]
         · 类型: {$name}
         · 币种: {$chain}
         · 金额: {$amount}
     }
-hongbaoActionMsg = 
+
+hongbaoMsg = 
     <b>{wallet}</b> » {hongbao}
 
     { NUMBER($step) ->
         *[0]
         · 普通红包，任何人可领取
-        · 专属红包，指定专属领取人
-        · 拼手气红包，随机金额先到先得
+        · 专属红包，指定领取人
+        · 拼手气红包，随机金额先到先得 
 
         <b>👉 请选择发送红包的类型</b>
         [1]
-        {hongbaoBase}
+        {hongbaoInfo}
 
         <b>👇 请选择红包币种</b>
         [2]
-        {hongbaoBase}
+        {hongbaoInfo}
 
         <b>👇 请选择红包金额</b>
-        可用余额: {$balance}
+        我的余额: {$balance}
         [3]
-        {hongbaoBase}
-
-        <b>👉 请确认是否创建红包?</b>
-        [4]
-        {hongbaoBase}
-
-        ✅ <b>红包创建成功</b>
-
-        [20]
-        {hongbaoBase}
+        {hongbaoInfo}
 
         <b>👉 请输入红包金额</b>
-        可用余额: {$balance}
-        [21]
-        {hongbaoBase}
+        我的余额: {$balance}
+        [4]
+        {hongbaoInfo}
 
-        <b>👉 请回复红包专属用户ID</b>
-        [22]
-        {hongbaoBase}
+        <b>👉 请回复专属红包用户ID</b>
+        [5]
+        {hongbaoInfo}
 
-        <b>👉 请回复拼手气红包拆分数量</b>
+        <b>👉 请回复拼手气红包总量</b>
+        [6]
+        { NUMBER($type) ->
+            *[0] 
+            {hongbaoInfo}
+            [1]
+            {hongbaoInfo}
+            · 专属: {$user}
+            [2]
+            {hongbaoInfo}
+            · 总数: {$split}
+        }
+
+        <b>👉 请确认是否创建红包?</b>
+        [7]
+        { NUMBER($type) ->
+            *[0] 
+            {hongbaoInfo}
+            [1]
+            {hongbaoInfo}
+            · 专属: {$user}
+            [2]
+            {hongbaoInfo}
+            · 总数: {$split}
+        }
+        · 链接: {$link}
+
+        ✅ <b>红包创建成功</b>
     }
-
-hongbaoMsg = 
-    <b>{hongbao}</b>
-
-    · 普通红包，任何人可领取
-    · 专属红包，指定领取人
-    · 拼手气红包，随机金额先到先得 
-
-    <b>👉 请选择发送红包的类型</b>
-hongbaoSelectChain = 
-    <b>{$type}</b>
-
-    <b>👉 请选择红包币种</b>
-
-hongbaoSelectAmount = 
-    <b>{$type}</b>
-
-    · 币种: {$chain}
-
-    <b>👉 请选择红包金额</b>
-
-hongbaoInputAmount = 
-    <b>{$type}</b>
-
-    · 币种: {$chain}
-
-    <b>👉 请回复发送红包金额</b>
-
-hongbaoReview = 
-    <b>{hongbao}</b>
-
-    · 币种: {$chain}
-    · 金额: {$amount}
-    · 类型: {$type}
-
-    <b>👉 请确认是否创建红包?</b>
-
-hongbaoSendSuccess = 
-    <b>{hongbao}</b>
-
-    · 币种: {$chain}
-    · 金额: {$amount}
-    · 类型: {$type}
-
-    ✅ <b>创建成功</b>
 
 
 ## ============================

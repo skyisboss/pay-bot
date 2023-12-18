@@ -22,6 +22,9 @@ instance.interceptors.request.use(
     // if (token) {
     //   config.headers["x-token"] = `Bearer ${token}`;
     // }
+    const { baseURL, url, data, method } = config
+    console.debug(`${method?.toUpperCase()} | ${baseURL}${url} | data=`, data)
+
     return config
   },
   err => {
@@ -37,13 +40,13 @@ instance.interceptors.response.use(
       config: { url },
       status,
     } = response
-    if (status !== 200) {
-      console.warn('状态错误', url)
-    }
-    if (data?.err === 500) {
+    // if (status !== 200) {
+    //   console.warn('状态错误', status, url)
+    // }
+    if ([400, 500].includes(data?.err)) {
       console.warn('请求错误', url)
     }
-
+    console.log('RESP:', data)
     return data
   },
   error => {
@@ -53,12 +56,13 @@ instance.interceptors.response.use(
       url: error?.config.url,
       data: error?.config.data,
       message: error?.message,
+      response: error?.response.data,
     }
     logger.error('http请求出错', { log })
     console.log(log)
 
     // return Promise.reject(new Error(error.message))
-    return {}
+    return error?.response?.data ?? {}
   },
 )
 

@@ -17,31 +17,40 @@ export const useMiddleware = async (bot: MyBot) => {
     // console.log(ctx.fluent.instance)
 
     // 获取系统配置
-    // if (!ctx.session.config) {
     const api = await userAPI.getConfig()
     if (apiError(ctx, api)) {
       return
     }
-
     ctx.session.config = api?.data
-    // }
 
     // 根据获取用户信息 赋值给session
     if (ctx.from?.id) {
-      if (ctx.session.userinfo?.id) {
-        return next()
-      } else {
-        try {
-          const userinfo = await userAPI.userinfo({ uid: ctx.from.id, nickname: ctx.from.first_name })
-
-          if (userinfo?.success) {
-            ctx.session.userinfo = userinfo?.data
-            return next()
-          }
-          return await stopService(ctx, '🚧 似乎出了一点问题，请稍后再试 - 1000')
-        } catch (error) {
-          return await stopService(ctx, '🚧 似乎出了一点问题，请稍后再试 - 1001')
+      /**
+       * TODO::如果用户session已经存在，则不在重新获取
+       * 但这样会导致用户修改设置session信息不同步
+       * 因此可以在设计用户修改设置的地方清空session
+       * 然后在这里判断session，如果session不存在就重新获取
+       * if (ctx.session.userinfo?.openid) {
+       *  return next()
+       * } else {
+       *  重新获取session
+       * }
+       */
+      try {
+        let userinfo: any
+        userinfo = await userAPI.userinfo({ openid: ctx.from.id.toString() })
+        if (!userinfo?.success && userinfo.err === 405) {
+          // 注册用户
+          userinfo = await userAPI.register({ openid: ctx.from.id.toString(), nickname: ctx.from.first_name })
         }
+
+        if (userinfo?.success) {
+          ctx.session.userinfo = userinfo?.data
+          return next()
+        }
+        return await stopService(ctx, '🚧 似乎出了一点问题，请稍后再试 - 1000')
+      } catch (error) {
+        return await stopService(ctx, '🚧 似乎出了一点问题，请稍后再试 - 1001')
       }
     }
   })

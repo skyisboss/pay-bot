@@ -446,3 +446,19 @@ export const WeiToEth = (amount: number, decimals: number) => {
 export const EthToWei = (amount: number, decimals: number) => {
   return math_multiply(amount, 10 ** decimals)
 }
+
+/**构建币种列表 */
+export const getTokenList = (ctx: BotContext) => {
+  const blockchain = ctx.session.config?.blockchain ?? []
+  return blockchain.map(x => {
+    return { ...x, text: `${x.token.toUpperCase()} · ${x.symbol.toUpperCase()}` }
+  })
+}
+
+/**
+ * 机器人链接
+ */
+export const BotLinkCode = (ctx: BotContext, link?: string) => {
+  const bot_link = ctx.session.config?.bot_link
+  return `${bot_link}?start=${link ?? ''}`
+}

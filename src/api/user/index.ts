@@ -1,10 +1,17 @@
 import { makeRequest } from '@/http'
 
 export const userAPI = {
-  userinfo: async (data: { uid: number; nickname: string }) => {
+  userinfo: async (data: { openid: string }) => {
     return await makeRequest<ApiResult.Userinfo>({
       method: 'post',
-      url: '/user/index',
+      url: '/user/info',
+      data,
+    })
+  },
+  register: async (data: { openid: string; nickname: string }) => {
+    return await makeRequest<ApiResult.Userinfo>({
+      method: 'post',
+      url: '/user/register',
       data,
     })
   },

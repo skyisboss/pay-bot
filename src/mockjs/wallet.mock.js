@@ -66,17 +66,23 @@ const release = {
       },
     })
   },
-  [`POST ${BASE_URL}/wallet/balanceOf`]: (req, res) => {
-    console.log('---->', req.params)
+  [`POST ${BASE_URL}/balance/balanceOf`]: (req, res) => {
+    console.log('---->', req.body)
     return res.json({
       ...obj,
       data: {
-        rows: [
-          {
-            chain: Mock.mock('@pick(["trc20", "bep20", "erc20"])'),
-            amount: 100,
-          },
-        ],
+        id: 1,
+        uid: 1,
+        openid: "5279874291",
+        account: "wallet",
+        trc20: "716800000",
+        erc20: "0",
+        bep20: "108500",
+        eth: "0",
+        trx: "0",
+        bnb: "0",
+        version: 36,
+        created: "2023-12-06T11:17:28.903Z"
       },
     })
   },

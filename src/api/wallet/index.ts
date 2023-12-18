@@ -18,7 +18,7 @@ export const walletAPI = {
     })
   },
   /**查询充值信息 */
-  depositInfo: async (data: { uid: number; token: string }) => {
+  depositInfo: async (data: { openid: string; token: string }) => {
     return await makeRequest<DepositInfo>({
       method: 'post',
       url: '/wallet/deposit',
@@ -34,16 +34,30 @@ export const walletAPI = {
   },
   /**
    * 获取用户的某个币种余额
-   * chain 空时返回全部余额
+   * token 空时返回全部余额
    */
-  balanceOf: async (data: { uid: number; chain?: number }) => {
-    return await makeRequest<BalanceInfo, 'list'>({
+  balanceOf: async (data: { openid: string; account: string; token?: string }) => {
+    return await makeRequest<BalanceInfo>({
       method: 'post',
-      url: '/wallet/balanceOf',
+      url: '/balance/balanceOf',
       data,
     })
   },
-  transfer: async (data: { openid: string; to_user: string; token: string; amount: string }) => {
+  balanceOfAccount: async (data: { openid: string; account: string }) => {
+    return await makeRequest<BalanceInfo>({
+      method: 'post',
+      url: '/balance/balanceOf',
+      data,
+    })
+  },
+  balanceOfAccountToken: async (data: { openid: string; account: string; token: string }) => {
+    return await makeRequest<BalanceInfo>({
+      method: 'post',
+      url: '/balance/balanceOf',
+      data,
+    })
+  },
+  transfer: async (data: { openid: string; touser: string; token: string; amount: string }) => {
     return await makeRequest({
       method: 'post',
       url: '/wallet/transfer',
@@ -67,7 +81,7 @@ export const walletAPI = {
     })
   },
   /**查看记录 列表 */
-  historyList: async (data: { openid: string; item: number; page: number }) => {
+  historyList: async (data: { openid: string; view: number; page: number }) => {
     return await makeRequest<HistoryItem, 'list'>({
       method: 'post',
       url: '/wallet/history/index',
@@ -75,7 +89,7 @@ export const walletAPI = {
     })
   },
   /**查看记录 详情 */
-  historyDetail: async (data: { openid: string; item: number; id: number }) => {
+  historyDetail: async (data: { openid: string; view: number; id: number }) => {
     return await makeRequest({
       method: 'post',
       url: '/wallet/history/detail',
@@ -88,12 +102,26 @@ export const walletAPI = {
     type: string
     token: string
     amount: string
-    user: string
-    split: string
+    touser?: string
+    split?: string
   }) => {
+    return await makeRequest<HongbaoItem>({
+      method: 'post',
+      url: '/hongbao/send',
+      data,
+    })
+  },
+  hongbaoInfo: async (data: { openid: string; link: string }) => {
+    return await makeRequest<HongbaoItem>({
+      method: 'post',
+      url: '/hongbao/info',
+      data,
+    })
+  },
+  claim: async (data: { openid: string; link: string }) => {
     return await makeRequest({
       method: 'post',
-      url: '/wallet/fahongbao',
+      url: '/hongbao/claim',
       data,
     })
   },
@@ -106,9 +134,22 @@ interface DepositInfo {
   qrcode: string
 }
 
-interface BalanceInfo {
-  chain: string
-  amount: number
+export interface BalanceInfo {
+  // chain: string
+  // amount: number
+
+  id: number
+  uid: number
+  openid: string
+  account: string
+  trc20: string
+  erc20: string
+  bep20: string
+  eth: string
+  trx: string
+  bnb: string
+  version: number
+  created: string
 }
 
 interface RateRes {
@@ -126,4 +167,19 @@ interface HistoryItem {
   amount: string
   hbType?: string
   created_at: number
+}
+
+interface HongbaoItem {
+  id: number
+  openid: string
+  type: string
+  token: string
+  amount: string
+  balance: string
+  touser: string
+  split: number
+  link: string
+  version: number
+  created_at: string
+  updated_at: string | null
 }

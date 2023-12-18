@@ -152,16 +152,18 @@ const BackupView = async (ctx: BotContext) => {
       })
     },
     done: async () => {
+      const btn = new InlineKeyboard()
       const account = ctx.session.scene.params?.account ?? ''
       const api = await userAPI.settingBackup({ openid: ctx.session.userinfo!.openid, account })
-      if (apiErrorWithGoback(ctx, api, '/setting?rep=1')) {
+      if (apiError(ctx, api, true)) {
+        btn.text(ctx.t('goBack'), '/setting?rep=1')
+        await display(ctx, api?.msg || ctx.t('httpError'), btn.inline_keyboard)
         return
       }
       restSceneInfo(ctx)
       ctx.session.onMessage = undefined
       ctx.session.userinfo!.backup_account = account
 
-      const btn = new InlineKeyboard()
       btn.text(ctx.t('goBack'), '/setting?rep=1')
       const msg = ctx.t('backupAddMsg', {
         step: 1,

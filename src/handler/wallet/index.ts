@@ -1,16 +1,22 @@
 import { AnyObjetc, BotContext } from '@/@types/types'
-import { walletAPI } from '@/api/wallet'
+import { BalanceInfo, walletAPI } from '@/api/wallet'
 import { logger } from '@/logger'
 import {
+  EthToWei,
+  BotLinkCode,
+  SessionVersion,
+  WeiToEth,
   apiError,
   checkScene,
   clearLastMessage,
   deleteMessage,
   display,
+  getTokenList,
   pager,
   restSceneInfo,
   showServerStop,
   stopService,
+  getChainSymbol,
 } from '@/util/helper'
 import { Composer, Filter, FilterQuery, InlineKeyboard } from 'grammy'
 import { format } from 'date-fns'
@@ -89,7 +95,7 @@ export const WalletView = async (ctx: BotContext) => {
 }
 
 export const coinSymbols = ['TRC20 · USDT', 'BEP20 · USDT', 'ERC20 · USDT']
-export const coinChain = ['tron', 'bsc', 'eth']
+// export const coinChain = ['tron', 'bsc', 'eth']
 
 /**充值 */
 export const DepositView = async (ctx: BotContext) => {
@@ -99,8 +105,8 @@ export const DepositView = async (ctx: BotContext) => {
     // 充值首页
     index: async () => {
       const btn = new InlineKeyboard()
-      coinSymbols.map((item, index) => {
-        btn.text(`${item}`, `/wallet/deposit?goto=done&coin=${index}`).row()
+      getTokenList(ctx).map(x => {
+        btn.text(`${x.text}`, `/wallet/deposit?goto=show&token=${x.token}`).row()
       })
       btn.text(ctx.t('goBack'), '/wallet?rep=1')
 
@@ -108,31 +114,29 @@ export const DepositView = async (ctx: BotContext) => {
     },
 
     // 选择币种
-    done: async () => {
-      const coin = Number(request.params?.coin ?? 0)
-      const qrCode = Number(request.params?.qrCode ?? 0)
-      const symbol = coinSymbols?.[coin]
-      const chain = coinChain[coin]
-      const show = qrCode === 1
-      const api = await walletAPI.depositInfo({ uid: ctx.session.userinfo!.id, token: chain })
+    show: async () => {
+      const qrcode = request.params?.qrcode ?? ''
+      const token = request.params?.token ?? ''
+      const version = SessionVersion(ctx)
+      const api = await walletAPI.depositInfo({ openid: ctx.session.userinfo!.openid, token: token })
       if (apiError(ctx, api)) {
         return
       }
 
       const btn = new InlineKeyboard()
-      if (show) {
-        btn.text(ctx.t('hideQrCode'), `/wallet/deposit?goto=done&coin=${coin}&qrCode=0`).row()
+      if (Number(qrcode)) {
+        btn.text(ctx.t('hideQrCode'), `/wallet/deposit?goto=show&token=${token}&qrcode=0&v=${version}`).row()
       } else {
-        btn.text(ctx.t('showQrCode'), `/wallet/deposit?goto=done&coin=${coin}&qrCode=1`).row()
+        btn.text(ctx.t('showQrCode'), `/wallet/deposit?goto=show&token=${token}&qrcode=1&v=${version}`).row()
       }
       btn.text(ctx.t('goBack'), '/wallet/deposit?rep=1')
 
       const msg = ctx.t('depositAddress', {
         address: api?.data?.address ?? '',
-        token: symbol,
+        token: token ?? '',
         min_amount: api?.data?.min_amount ?? '',
         qrcode: api?.data?.qrcode ?? '',
-        show: show ? 1 : 0,
+        show: Number(qrcode) ? 1 : 0,
       })
 
       await display(ctx, msg, btn.inline_keyboard, true)
@@ -160,8 +164,8 @@ export const TransferView = async (ctx: BotContext) => {
     // 选择币种
     index: async () => {
       const btn = new InlineKeyboard()
-      coinSymbols.map((item, index) => {
-        btn.text(`${item}`, `/wallet/transfer?goto=amount&chain=${index}`).row()
+      getTokenList(ctx).map(x => {
+        btn.text(`${x.text}`, `/wallet/transfer?goto=amount&token=${x.token}`).row()
       })
       btn.text(ctx.t('cancel'), '/wallet?rep=1')
 
@@ -180,30 +184,77 @@ export const TransferView = async (ctx: BotContext) => {
       }
       const msg = ctx.t('transferActionMsg', {
         step: 0,
-        chain: '',
-        payee: '',
+        token: '',
+        touser: '',
         amount: '',
-        payee_name: '',
       })
 
       await display(ctx, msg, btn.inline_keyboard, true)
     },
+
+    // 输入金额
+    amount: async () => {
+      const token = request.params?.token ?? ''
+      const btn = new InlineKeyboard()
+      btn.text(ctx.t('cancel'), '/wallet/transfer?rep=1')
+      const msg = ctx.t('transferActionMsg', {
+        step: 1,
+        token: token,
+        touser: '',
+        amount: '',
+      })
+      // 初始化场景
+      ctx.session.onMessage = {
+        name: 'input-amount',
+        time: Date.now(),
+        call: async ctx => {
+          const message = (ctx.message?.text ?? '').trim()
+          const amount = Number(message)
+          if (Number.isNaN(amount) || amount <= 0) {
+            return await invalidInput(ctx, ctx.t('invalidAmount'))
+          }
+          // 查询余额
+          const api = await walletAPI.balanceOf({ openid: ctx.session.userinfo!.openid, account: 'wallet' })
+          if (apiError(ctx, api, true)) {
+            return await invalidInput(ctx, ctx.t('invalidPayee'))
+          }
+          // const token = ctx.session.scene.params?.token ?? ''
+          const balance = Number(api.data?.[token as keyof BalanceInfo] ?? 0)
+          const amountRaw = EthToWei(amount, 6)
+          if (balance < amountRaw) {
+            return await invalidInput(ctx, ctx.t('transferBalanceFail', { symbol: token }))
+          }
+
+          // 跳转操作方法
+          ctx.session.onMessage = undefined
+          ctx.session.scene.params = {}
+          ctx.session.scene.params['token'] = token
+          ctx.session.scene.params['amount'] = message
+          ctx.session.request.goto = 'touser'
+          await clearLastMessage(ctx)
+          await TransferView(ctx)
+        },
+      }
+
+      await display(ctx, msg, btn.inline_keyboard, true)
+    },
     // 输入收款人
-    payee: async () => {
+    touser: async () => {
       // 选择的币种
-      ctx.session.scene.params.chain = request.params?.chain ?? ''
-      ctx.session.scene.router = '/wallet/transfer?goto=getInput&inputType=payee'
+      // ctx.session.scene.params.chain = request.params?.chain ?? ''
+      // ctx.session.scene.router = '/wallet/transfer?goto=getInput&inputType=payee'
+      const amount = ctx.session.scene.params?.amount ?? 0
+      const token = ctx.session.scene.params?.token ?? ''
       const btn = new InlineKeyboard()
       btn.text(ctx.t('goBack'), '/start?rep=1')
       const msg = ctx.t('transferActionMsg', {
         step: 2,
-        chain: coinSymbols?.[request.params?.chain],
-        payee: '',
-        amount: ctx.session.scene.params?.amount ?? '',
-        payee_name: '',
+        token: token,
+        amount: amount,
+        touser: '',
       })
       ctx.session.onMessage = {
-        name: 'payee',
+        name: 'input-touser',
         time: Date.now(),
         call: async ctx => {
           const message = (ctx.message?.text ?? '').trim()
@@ -217,114 +268,70 @@ export const TransferView = async (ctx: BotContext) => {
             return await invalidInput(ctx, ctx.t('invalidPayee'))
           }
 
-          ctx.session.scene.params.payee = message
-          ctx.session.scene.params.payee_info = api?.data ?? {}
-
-          // 删除用户回复的信息
-          deleteMessage(ctx, ctx.message!.chat.id, ctx.message!.message_id)
-          // 删除前一条信息，避免信息太多
-          const { chatId, msgId } = ctx.session.lastMessage
-          if (chatId && msgId) {
-            deleteMessage(ctx, chatId, msgId)
-          }
-
-          // return await actions.review()
+          // 跳转操作方法
+          ctx.session.onMessage = undefined
+          ctx.session.scene.params['touser'] = message
           ctx.session.request.goto = 'review'
+          await clearLastMessage(ctx)
           await TransferView(ctx)
+
+          // ctx.session.scene.params.payee = message
+          // ctx.session.scene.params.payee_info = api?.data ?? {}
+
+          // // 删除用户回复的信息
+          // deleteMessage(ctx, ctx.message!.chat.id, ctx.message!.message_id)
+          // // 删除前一条信息，避免信息太多
+          // const { chatId, msgId } = ctx.session.lastMessage
+          // if (chatId && msgId) {
+          //   deleteMessage(ctx, chatId, msgId)
+          // }
+
+          // // return await actions.review()
+          // ctx.session.request.goto = 'review'
+          // await TransferView(ctx)
         },
       }
 
       await display(ctx, msg, btn.inline_keyboard)
-    },
-    // 输入金额
-    amount: async () => {
-      const btn = new InlineKeyboard()
-      btn.text(ctx.t('cancel'), '/wallet/transfer?rep=1')
-      const msg = ctx.t('transferActionMsg', {
-        step: 1,
-        chain: coinSymbols?.[request.params?.chain],
-        payee: '',
-        amount: '',
-        payee_name: '',
-      })
-      // 初始化场景
-      ctx.session.onMessage = {
-        name: 'amount',
-        time: Date.now(),
-        call: async ctx => {
-          const message = (ctx.message?.text ?? '').trim()
-          const amount = parseFloat(message)
-          if (Number.isNaN(amount) || amount <= 0) {
-            return await invalidInput(ctx, ctx.t('invalidAmount'))
-          }
-          // 查询余额
-          const chain = Number(ctx.session.scene.params?.chain ?? '')
-          const api = await walletAPI.balanceOf({ uid: ctx.session.userinfo!.id, chain: chain })
-          if (apiError(ctx, api, true)) {
-            return await invalidInput(ctx, ctx.t('invalidPayee'))
-          }
-          const balance = api.data?.rows?.[0].amount ?? 0
-          if (balance < amount) {
-            const symbol = coinSymbols?.[chain] ?? ''
-            return await invalidInput(ctx, ctx.t('transferBalanceFail', { symbol: symbol }))
-          }
-
-          // 删除用户回复的信息
-          deleteMessage(ctx, ctx.message!.chat.id, ctx.message!.message_id)
-          // 删除前一条信息，避免信息太多
-          const { chatId, msgId } = ctx.session.lastMessage
-          if (chatId && msgId) {
-            deleteMessage(ctx, chatId, msgId)
-          }
-          // 跳转操作方法
-          ctx.session.scene.params.amount = message
-          ctx.session.request.goto = 'payee'
-          await TransferView(ctx)
-        },
-      }
-
-      await display(ctx, msg, btn.inline_keyboard, true)
     },
     review: async () => {
       const btn = new InlineKeyboard()
       btn.text(ctx.t('confirm'), '/wallet/transfer?goto=done')
       btn.text(ctx.t('cancel'), '/wallet/transfer?rep=1')
 
-      const { chain, amount, payee, payee_name } = ctx.session.scene.params
+      const { token, amount, touser } = ctx.session.scene.params
       const msg = ctx.t('transferActionMsg', {
         step: 3,
-        chain: coinSymbols?.[chain],
-        payee: payee ?? '',
+        token: token ?? '',
+        touser: touser ?? '',
         amount: amount ?? '',
-        payee_name: payee_name?.first_name ?? '',
       })
 
       await display(ctx, msg, btn.inline_keyboard)
     },
     done: async () => {
+      const btn = new InlineKeyboard()
       await ctx.editMessageText('💸')
 
-      const { chain, amount, payee, payee_name } = ctx.session.scene.params
-      ctx.session.onMessage = undefined
-      restSceneInfo(ctx)
+      const { token, amount, touser } = ctx.session.scene.params
       const api = await walletAPI.transfer({
         openid: ctx.session.userinfo!.openid,
         amount: amount,
-        token: chain,
-        to_user: payee,
+        token: token,
+        touser: touser,
       })
-      if (apiError(ctx, api)) {
+      if (apiError(ctx, api, true)) {
+        await ctx.editMessageText(api?.msg || ctx.t('httpError'))
+        btn.text(ctx.t('goback'), '/wallet')
         return
       }
 
-      const btn = new InlineKeyboard()
       btn.text(ctx.t('goback'), '/wallet')
       const msg = ctx.t('transferActionMsg', {
         step: 4,
-        chain: coinSymbols?.[chain],
-        payee: payee ?? '',
+        token: token ?? '',
+        touser: touser ?? '',
         amount: amount ?? '',
-        payee_name: payee_name?.first_name ?? '',
       })
       await display(ctx, msg, btn.inline_keyboard, true)
     },
@@ -349,22 +356,11 @@ export const WithdrawView = async (ctx: BotContext) => {
   }
   const actions: AnyObjetc = {
     index: async () => {
-      ctx.session.scene = {
-        name: 'WithdrawView',
-        router: '',
-        createAt: Date.now(),
-        store: new Map(),
-        params: {
-          chain: '',
-          balance: '',
-          address: '',
-        },
-      }
-
+      restSceneInfo(ctx)
       ctx.session.onMessage = undefined
       const btn = new InlineKeyboard()
-      coinSymbols.map((item, index) => {
-        btn.text(`${item}`, `/wallet/withdraw?goto=address&chain=${index}`).row()
+      getTokenList(ctx).map(x => {
+        btn.text(`${x.text}`, `/wallet/withdraw?goto=address&token=${x.token}`).row()
       })
       btn.text(ctx.t('goBack'), '/wallet?rep=1')
       const msg = ctx.t('withdrawActionMsg', {
@@ -376,45 +372,56 @@ export const WithdrawView = async (ctx: BotContext) => {
       await display(ctx, msg, btn.inline_keyboard, true)
     },
     address: async () => {
-      const chain = request.params?.chain ?? ''
-      const api = await walletAPI.balanceOf({ uid: ctx.session.userinfo!.id, chain })
+      const token = request.params?.token ?? ''
+      const api = await walletAPI.balanceOf({ openid: ctx.session.userinfo!.openid, account: 'wallet' })
       if (apiError(ctx, api)) {
         return
       }
-      const balance = api.data?.rows?.[0]?.amount ?? 0
+      const balance = Number(api.data?.[token as keyof BalanceInfo] ?? 0)
       if (balance <= 0) {
         return await ctx.answerCallbackQuery({
           text: ctx.t('withdrawBalanceFail'),
           show_alert: true,
         })
       }
-      ctx.session.scene.params['balance'] = balance.toString()
-
-      ctx.session.scene.params['chain'] = chain
+      ctx.session.scene.params = {}
+      ctx.session.scene.params['balance'] = WeiToEth(balance, 6).toString()
+      ctx.session.scene.params['token'] = token
       const btn = new InlineKeyboard()
       btn.text(ctx.t('cancel'), '/wallet?rep=1')
 
       const msg = ctx.t('withdrawActionMsg', {
         step: 1,
-        chain: coinSymbols?.[chain] ?? '',
+        chain: token,
         balance: '',
         address: '',
       })
       await display(ctx, msg, btn.inline_keyboard, true)
       ctx.session.onMessage = {
-        name: 'payee',
+        name: 'input-address',
         time: Date.now(),
         call: async ctx => {
-          const chain = Number(ctx.session.scene.params?.chain ?? -1)
+          const token = ctx.session.scene.params?.token
           const message = (ctx.message?.text ?? '').trim()
-          const addressRegx = [/^T[a-zA-HJ-NP-Z0-9]{33}$/, /^0x[0-9a-fA-F]{40}$/, /^0x[0-9a-fA-F]{40}$/]
-          if (chain < 0 || !addressRegx[chain].test(message)) {
+          const addressRegx = [
+            {
+              token: ['eth', 'erc20', 'bnb', 'bep20'],
+              regx: /^0x[0-9a-fA-F]{40}$/,
+            },
+            {
+              token: ['trx', 'trc20'],
+              regx: /^T[a-zA-HJ-NP-Z0-9]{33}$/,
+            },
+          ]
+          const regx = addressRegx.find(x => x.token.includes(token))
+          if (!regx?.regx.test(message)) {
             return await invalidInput(ctx, '无效地址')
           }
 
           // 跳转操作方法
           ctx.session.scene.params['address'] = message
           ctx.session.request.goto = 'review'
+          ctx.session.onMessage = undefined
           await clearLastMessage(ctx)
           await WithdrawView(ctx)
         },
@@ -425,11 +432,10 @@ export const WithdrawView = async (ctx: BotContext) => {
       btn.text(ctx.t('confirm'), '/wallet/withdraw?goto=done')
       btn.text(ctx.t('cancel'), '/wallet?rep=1')
 
-      ctx.session.onMessage = undefined
-      const { chain, balance, address } = ctx.session.scene.params
+      const { token, balance, address } = ctx.session.scene.params
       const msg = ctx.t('withdrawActionMsg', {
         step: 2,
-        chain: coinSymbols?.[chain] ?? '',
+        chain: token ?? '',
         balance: balance ?? '',
         address: address ?? '',
       })
@@ -437,11 +443,11 @@ export const WithdrawView = async (ctx: BotContext) => {
       await display(ctx, msg, btn.inline_keyboard)
     },
     done: async () => {
-      const { chain, balance, address } = ctx.session.scene.params
+      const { token, balance, address } = ctx.session.scene.params
       await ctx.editMessageText(ctx.t('loading'))
       const api = await walletAPI.withdraw({
         openid: ctx.session.userinfo!.openid,
-        token: chain,
+        token,
         address,
         amount: balance,
       })
@@ -450,17 +456,16 @@ export const WithdrawView = async (ctx: BotContext) => {
       }
 
       const btn = new InlineKeyboard()
-      btn.text(ctx.t('goHome'), 'start?rep=1').row()
-      btn.text(ctx.t('wallet'), 'wallet?rep=1')
+      btn.text(ctx.t('goBack'), '/wallet?rep=1')
 
       restSceneInfo(ctx)
       const msg = ctx.t('withdrawActionMsg', {
         step: 3,
-        chain: coinSymbols?.[chain] ?? '',
+        chain: token ?? '',
         balance: balance ?? '',
         address: address ?? '',
       })
-      const span = `\r\n<span class="tg-spoiler">防伪码: 52033</span>`
+      const span = '' //`\r\n<span class="tg-spoiler">防伪码: 52033</span>`
 
       await display(ctx, msg + span, btn.inline_keyboard, true)
     },
@@ -473,26 +478,31 @@ export const WithdrawView = async (ctx: BotContext) => {
 /**历史记录 */
 export const HistoryView = async (ctx: BotContext) => {
   const request = ctx.session.request
-  const items = [ctx.t('depositHistory'), ctx.t('transferHistory'), ctx.t('withdrawHistory'), ctx.t('hongbaoHistory')]
+  const btnItems = [
+    ctx.t('depositHistory'),
+    ctx.t('transferHistory'),
+    ctx.t('withdrawHistory'),
+    ctx.t('hongbaoHistory'),
+  ]
 
   const actions: AnyObjetc = {
     index: async () => {
       const btn = new InlineKeyboard()
-      items.map((item, index) => {
+      btnItems.map((item, index) => {
         if (index % 2 == 0) {
-          btn.text(item, `/wallet/history?goto=list&item=${index}`)
+          btn.text(item, `/wallet/history?goto=view&view=${index}`)
         } else {
-          btn.text(item, `/wallet/history?goto=list&item=${index}`).row()
+          btn.text(item, `/wallet/history?goto=view&view=${index}`).row()
         }
       })
-      btn.text(ctx.t('goBack'), '/wallet?rep=1')
 
+      btn.text(ctx.t('goBack'), '/wallet?rep=1')
       await display(ctx, ctx.t('historyMsg'), btn.inline_keyboard, true)
     },
-    list: async () => {
-      const item = Number(request.params?.item ?? '')
+    view: async () => {
+      const view = Number(request.params?.view ?? '')
       const page = request.params?.page || 1
-      const api = await walletAPI.historyList({ item, page, openid: ctx.session.userinfo!.openid })
+      const api = await walletAPI.historyList({ view, page, openid: ctx.session.userinfo!.openid })
       if (apiError(ctx, api)) {
         return
       }
@@ -501,19 +511,19 @@ export const HistoryView = async (ctx: BotContext) => {
       const typeList = [ctx.t('hongbao1'), ctx.t('hongbao2'), ctx.t('hongbao3')]
       api?.data?.rows?.map(x => {
         let showText = ''
+        const d = new Date(x.created_at)
         // 红包
-        if (3 === item) {
-          // showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${typeList?.[Number(x?.hbType)]}(💎${x.amount})`
-          showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${x.token} · 🧧${x.amount}`
-        } else {
-          showText = `${format(x.created_at, 'MM/dd HH:ii')} · ${x.token} · 💎${x.amount}`
+        showText = `${x.amount} · ${getChainSymbol(ctx, x.token)}`
+        if (3 === view) {
+          // showText = `${format(d, 'MM/dd HH:ii')} · ${x.token} · 🧧${x.amount}`
+          showText = `🧧${showText}`
         }
-        btn.text(showText, `/wallet/history?goto=detail&item=${item}&id=${x.id}`).row()
+        btn.text(showText, `/wallet/history?goto=detail&view=${view}&id=${x.id}`).row()
       })
       const totalItem = api?.data?.total ?? 0
       const pageSize = api?.data?.size ?? 5
       const totalPage = Math.ceil(totalItem / pageSize)
-      pager(ctx, btn, totalPage, page, `/wallet/history?goto=list&item=${item}`)
+      pager(ctx, btn, totalPage, page, `/wallet/history?goto=view&view=${view}`)
       btn.text(ctx.t('goBack'), '/wallet/history')
 
       const pageInfo = ctx.t('pageInfo', {
@@ -523,7 +533,7 @@ export const HistoryView = async (ctx: BotContext) => {
 
       const counts = (api?.data as any)?.counts ?? {}
       const msg = ctx.t('historyListMsg', {
-        item,
+        item: view,
         count1: counts?.count1 ?? '',
         count2: counts?.count2 ?? '',
         count3: counts?.count3 ?? '',
@@ -533,21 +543,46 @@ export const HistoryView = async (ctx: BotContext) => {
       await display(ctx, msg, btn.inline_keyboard, true)
     },
     detail: async () => {
-      const item = Number(request.params?.item ?? '')
+      const view = Number(request.params?.view ?? '')
       const id = Number(request.params?.id)
-      const apiRes = await walletAPI.historyDetail({ item, id, openid: ctx.session.userinfo!.openid })
+      const apiRes = await walletAPI.historyDetail({ view, id, openid: ctx.session.userinfo!.openid })
       if (apiError(ctx, apiRes)) {
         return
       }
 
-      const time = format(apiRes?.data?.create_at, 'yy/MM/dd HH:ii')
+      const time = format(new Date(apiRes?.data?.created_at), 'yy/MM/dd HH:ii')
       const status = [ctx.t('statusFail'), ctx.t('statusSuccess')]
-      const msg = ctx.t('depositHistoryDetail', {
-        time: time,
-        amount: apiRes?.data?.amount,
-        token: apiRes?.data?.token,
-        status: status?.[apiRes?.data?.status ?? 0],
-      })
+
+      let msg = ''
+      switch (view) {
+        case 3:
+          const hbType = [ctx.t('hongbao1'), ctx.t('hongbao2'), ctx.t('hongbao3')]
+          let status = 0
+          if (apiRes?.data?.type === 2) {
+            status = 2
+          } else if (apiRes?.data?.available_claim === 0) {
+            status = 1
+          }
+          msg = ctx.t('hongbaoHistoryDetail', {
+            name: hbType[apiRes?.data?.type],
+            time: time,
+            amount: apiRes?.data?.amount,
+            token: apiRes?.data?.token,
+            status: status,
+            claim: apiRes?.data?.available_claim,
+            total: apiRes?.data?.available_balance?.length,
+          })
+          break
+
+        default:
+          msg = ctx.t('depositHistoryDetail', {
+            time: time,
+            amount: apiRes?.data?.amount,
+            token: apiRes?.data?.token,
+            status: 1,
+          })
+          break
+      }
       await ctx.answerCallbackQuery({
         show_alert: true,
         text: msg,
@@ -585,7 +620,7 @@ export const HongbaoView = async (ctx: BotContext) => {
         btn.text(item, `/wallet/hongbao?goto=chain&type=${index}`).row()
       })
       btn.text(ctx.t('cancel'), '/wallet?rep=1')
-      const msg = ctx.t('hongbaoActionMsg', {
+      const msg = ctx.t('hongbaoMsg', {
         step: 0,
         type: '',
         chain: '',
@@ -597,30 +632,16 @@ export const HongbaoView = async (ctx: BotContext) => {
 
       await display(ctx, msg, btn.inline_keyboard, true)
     },
+    // 选择币种
     chain: async () => {
-      ctx.session.scene = {
-        name: 'WithdrawView',
-        router: '',
-        createAt: Date.now(),
-        store: new Map(),
-        params: {
-          type: '',
-          name: '',
-          chain: '',
-          amount: '',
-          user: '',
-          split: '',
-          balance: '0',
-        },
-      }
       const type = request.params?.type ?? ''
-      ctx.session.scene.params['type'] = type
+
       const btn = new InlineKeyboard()
-      coinSymbols.map((item, index) => {
-        btn.text(`${item}`, `/wallet/hongbao?goto=amount&type=${type}&chain=${index}`).row()
+      getTokenList(ctx).map(x => {
+        btn.text(`${x.text}`, `/wallet/hongbao?goto=amount&type=${type}&token=${x.token}`).row()
       })
       btn.text(ctx.t('cancel'), '/wallet?rep=1')
-      const msg = ctx.t('hongbaoActionMsg', {
+      const msg = ctx.t('hongbaoMsg', {
         step: 1,
         type: Number(type),
         name: typeList[type],
@@ -632,66 +653,75 @@ export const HongbaoView = async (ctx: BotContext) => {
 
       await display(ctx, msg, btn.inline_keyboard, true)
     },
+    // 选择金额
     amount: async () => {
       const type = request.params?.type ?? ''
-      const chain = request.params?.chain
+      const token = request.params?.token ?? ''
       ctx.session.onMessage = undefined
-      ctx.session.scene.params['chain'] = chain
+      ctx.session.scene.params = {}
+      ctx.session.scene.params['type'] = type
+      ctx.session.scene.params['token'] = token
       // 判断用户是否有余额
-      const api = await walletAPI.balanceOf({ uid: ctx.session.userinfo!.id, chain: chain })
+      const api = await walletAPI.balanceOf({ openid: ctx.session.userinfo!.openid, account: 'wallet' })
       if (apiError(ctx, api)) {
         return
       }
-      const balance = api.data?.rows?.[0].amount ?? 0
+      const balance = Number(api.data?.[token as keyof BalanceInfo] ?? 0)
       if (balance <= 0) {
-        return await invalidInput(ctx, ctx.t('hongbaoBalanceFail'))
+        await ctx.answerCallbackQuery({
+          text: ctx.t('hongbaoBalanceFail'),
+          show_alert: true,
+        })
+        return
+        // return await invalidInput(ctx, ctx.t('hongbaoBalanceFail'))
       }
-      ctx.session.scene.params['balance'] = balance
+      const balanceEth = WeiToEth(balance, 6)
+      ctx.session.scene.params['balanceRaw'] = balance
+      ctx.session.scene.params['balanceEth'] = balanceEth
 
       const btn = new InlineKeyboard()
       amountList.map((amount, index) => {
         let to = 'review'
         if (Number(type) === 1) to = 'user'
         if (Number(type) === 2) to = 'split'
-        const router = `/wallet/hongbao?goto=${to}&type=${type}&chain=${chain}&amount=${amount}&rep=1`
+        const router = `/wallet/hongbao?goto=${to}&type=${type}&token=${token}&amount=${amount}&rep=1`
         if (index % 3 == 2) {
           btn.text(`🧧 ${amount}`, router).row()
         } else {
           btn.text(`🧧 ${amount}`, router)
         }
       })
-      btn.text(ctx.t('hongbaoOtherAmount'), `/wallet/hongbao?goto=inputAmount&type=${type}&chain=${chain}`)
+      btn.text(ctx.t('hongbaoOtherAmount'), `/wallet/hongbao?goto=input&type=${type}&token=${token}`)
       btn.text(ctx.t('cancel'), '/wallet/hongbao?rep=1')
 
-      const msg = ctx.t('hongbaoActionMsg', {
+      const msg = ctx.t('hongbaoMsg', {
         step: 2,
         type: Number(type),
         name: typeList[type],
-        chain: coinSymbols[chain],
+        chain: token,
         amount: '',
         user: '',
         split: '',
-        balance: balance,
+        balance: balanceEth,
       })
       await display(ctx, msg, btn.inline_keyboard, true)
     },
     // 输入金额
-    inputAmount: async () => {
-      const { chain, type, amount, user, split } = request.params
-      // 11-输入红包金额 2-红包接收用户ID 3-红包拆分数量
+    input: async () => {
+      const { token, type, balanceEth, user, split } = ctx.session.scene.params
       const btn = new InlineKeyboard()
-      btn.text(ctx.t('cancel'), `/wallet/hongbao?goto=amount&type=${type}&chain=${chain}`)
-
-      const msg = ctx.t('hongbaoActionMsg', {
-        step: 20,
+      btn.text(ctx.t('cancel'), `/wallet/hongbao?goto=amount&type=${type}&token=${token}`)
+      const msg = ctx.t('hongbaoMsg', {
+        step: 3,
         type: Number(type),
         name: typeList[type],
-        chain: coinSymbols[chain],
+        chain: token ?? '',
         amount: '',
         user: '',
         split: '',
-        balance: ctx.session.scene.params?.balance ?? '',
+        balance: balanceEth ?? '',
       })
+
       await display(ctx, msg, btn.inline_keyboard, true)
       ctx.session.onMessage = {
         name: 'input-amount',
@@ -704,12 +734,19 @@ export const HongbaoView = async (ctx: BotContext) => {
           }
 
           // 跳转操作方法
+          ctx.session.onMessage = undefined
           ctx.session.scene.params['amount'] = message
-          let to = 'review'
-          if (Number(type) === 1) to = 'user'
-          if (Number(type) === 2) to = 'split'
-          ctx.session.request.goto = to
           ctx.session.request.params['rep'] = '0'
+          if (Number(type) === 0) {
+            ctx.session.request.goto = 'review'
+          }
+          if (Number(type) === 1) {
+            ctx.session.request.goto = 'user'
+          }
+          if (Number(type) === 2) {
+            ctx.session.request.goto = 'split'
+          }
+
           await clearLastMessage(ctx)
           await HongbaoView(ctx)
         },
@@ -717,16 +754,16 @@ export const HongbaoView = async (ctx: BotContext) => {
     },
     // 专属红包
     user: async () => {
-      const { type, chain } = request.params
-      const amount = ctx.session.request.params?.amount ?? ctx.session.scene.params?.amount ?? ''
+      const { token, type, balanceEth, user, split, amount } = ctx.session.scene.params
+
       const btn = new InlineKeyboard()
       btn.text(ctx.t('cancel'), '/wallet?rep=1')
-      const msg = ctx.t('hongbaoActionMsg', {
-        step: 21,
+      const msg = ctx.t('hongbaoMsg', {
+        step: 4,
         type: Number(type),
         name: typeList[type],
-        chain: coinSymbols[chain],
-        amount: amount ?? '',
+        chain: token,
+        amount: amount ?? ctx.session.request.params?.amount ?? '',
         user: '',
         split: '',
       })
@@ -739,7 +776,11 @@ export const HongbaoView = async (ctx: BotContext) => {
         call: async ctx => {
           const message = (ctx.message?.text ?? '').trim()
           if (!/^\d+$/.test(message)) {
-            return await invalidInput(ctx, ctx.t('hongbaoUserFail'))
+            return await invalidInput(ctx, ctx.t('hongbaoInputFail'))
+          }
+
+          if (message === ctx.session.userinfo?.openid) {
+            return await invalidInput(ctx, ctx.t('hongbaoUserSelfFail'))
           }
 
           // 判断用户是否存在
@@ -749,6 +790,7 @@ export const HongbaoView = async (ctx: BotContext) => {
           }
 
           // 跳转操作方法
+          ctx.session.onMessage = undefined
           ctx.session.scene.params['user'] = message
           ctx.session.request.goto = 'review'
           ctx.session.request.params['rep'] = '0'
@@ -759,16 +801,15 @@ export const HongbaoView = async (ctx: BotContext) => {
     },
     // 拆分红包
     split: async () => {
-      const { type, chain } = request.params
-      const amount = ctx.session.request.params?.amount ?? ctx.session.scene.params?.amount ?? ''
+      const { token, type, balanceEth, user, split, amount } = ctx.session.scene.params
       const btn = new InlineKeyboard()
       btn.text(ctx.t('cancel'), '/wallet?rep=1')
-      const msg = ctx.t('hongbaoActionMsg', {
-        step: 22,
+      const msg = ctx.t('hongbaoMsg', {
+        step: 5,
         type: Number(type),
         name: typeList[type],
-        chain: coinSymbols[chain],
-        amount: amount ?? '',
+        chain: token,
+        amount: amount ?? ctx.session.request.params?.amount ?? '',
         user: '',
         split: '',
       })
@@ -780,12 +821,13 @@ export const HongbaoView = async (ctx: BotContext) => {
         time: Date.now(),
         call: async ctx => {
           const message = (ctx.message?.text ?? '').trim()
-          const amount = parseFloat(message)
-          if (Number.isNaN(amount) || amount <= 0) {
+          const split = Number(message)
+          if (Number.isNaN(split) || split <= 0 || split > 100) {
             return await invalidInput(ctx, ctx.t('hongbaoInputFail'))
           }
 
           // 跳转操作方法
+          ctx.session.onMessage = undefined
           ctx.session.scene.params['split'] = message
           ctx.session.request.goto = 'review'
           ctx.session.request.params['rep'] = '0'
@@ -795,61 +837,111 @@ export const HongbaoView = async (ctx: BotContext) => {
       }
     },
     review: async () => {
-      ctx.session.onMessage = undefined
-      const { chain, type, user, split } = ctx.session.scene.params
-      const amount = ctx.session.request.params?.amount ?? ctx.session.scene.params?.amount ?? ''
+      const { token, type, balanceEth, user, split, amount } = ctx.session.scene.params
+      const getAmount = amount ?? ctx.session.request.params?.amount ?? ''
 
       const btn = new InlineKeyboard()
-      btn.text(ctx.t('confirm'), `/wallet/hongbao?goto=done&type=${type}&chain=${chain}&amount=${amount}`)
-      btn.text(ctx.t('cancel'), '/wallet/hongbao?rep=1')
-      let msg = ctx.t('hongbaoActionMsg', {
-        step: 3,
-        type: Number(type),
-        name: typeList[type],
-        chain: coinSymbols[chain],
-        amount: amount ?? '',
-        user: user ?? '',
-        split: split ?? '',
-      })
-      msg = msg.replace(/DELETE_EMPTY_STRING\n/, '')
-
+      let msg = ''
+      if (Number(getAmount) > Number(balanceEth)) {
+        btn.text(ctx.t('goBack'), '/wallet/hongbao?rep=1')
+        msg = ctx.t('hongbaoBalanceFail')
+      } else {
+        btn.text(ctx.t('confirm'), `/wallet/hongbao?goto=done&type=${type}&token=${token}&amount=${getAmount}`)
+        btn.text(ctx.t('cancel'), '/wallet/hongbao?rep=1')
+        msg = ctx.t('hongbaoMsg', {
+          step: 6,
+          type: Number(type),
+          name: typeList[type],
+          chain: token,
+          amount: getAmount,
+          user: user ?? '',
+          split: split ?? '',
+        })
+      }
       const isRep = Number(ctx.session.request.params?.rep ?? '') === 1
       await display(ctx, msg, btn.inline_keyboard, isRep)
     },
     done: async () => {
       await ctx.editMessageText(ctx.t('loading'))
-
-      const { chain, type, user, split } = ctx.session.scene.params
-      const amount = ctx.session.request.params?.amount ?? ctx.session.scene.params?.amount ?? ''
-
+      const { token, type, balanceEth, user, split, amount } = ctx.session.scene.params
       const api = await walletAPI.fahongbao({
         openid: ctx.session.userinfo!.openid,
-        type,
-        token: chain,
-        amount,
-        user,
-        split,
+        token,
+        type: String(type),
+        amount: String(amount ?? ctx.session.request.params?.amount ?? ''),
+        touser: user ?? ctx.session.request.params?.user,
+        split: split ?? ctx.session.request.params?.split,
       })
-      if (apiError(ctx, api)) {
-        return
+
+      let msg = ''
+      if (apiError(ctx, api, true)) {
+        msg = api?.msg || ctx.t('httpError')
+      } else {
+        msg = ctx.t('hongbaoMsg', {
+          step: 7,
+          type: Number(type),
+          name: typeList[type],
+          chain: token,
+          amount: amount ?? ctx.session.request.params?.amount ?? '',
+          user: user ?? '',
+          split: split ?? '',
+          link: BotLinkCode(ctx, api?.data?.link),
+        })
       }
-
-      restSceneInfo(ctx)
-      ctx.session.onMessage = undefined
-
       const btn = new InlineKeyboard()
       btn.text(ctx.t('goBack'), '/wallet?rep=1')
-
-      let msg = ctx.t('hongbaoActionMsg', {
-        step: 4,
-        type: Number(type),
-        name: typeList[type],
-        chain: coinSymbols[chain],
-        amount: amount ?? '',
-        user: user ?? '',
-        split: split ?? '',
-      })
       await display(ctx, msg, btn.inline_keyboard, true)
+    },
+    claim: async () => {
+      const link = request.params?.link ?? ''
+      const claim = request.params?.claim ?? ''
+      const btn = new InlineKeyboard()
+
+      if (claim) {
+        const api = await walletAPI.claim({ openid: ctx.session.userinfo!.openid, link: link })
+        if (apiError(ctx, api, true)) {
+          btn.text(ctx.t('goBack'), '/start?rep=1')
+          await display(ctx, api?.msg ?? ctx.t('httpError'), btn.inline_keyboard, true)
+          return
+        }
+
+        btn.text(ctx.t('wallet'), '/wallet?rep=1')
+        const type = Number(api?.data?.type ?? 0)
+        const msg = ctx.t('hongbaoClaimMsg', {
+          step: 1,
+          type: type,
+          name: typeList[type],
+          token: api.data?.token ?? '',
+          amount: api.data?.amount ?? '',
+          user: api.data?.touser ?? '',
+          split: api.data?.split ?? '',
+        })
+        await clearLastMessage(ctx)
+        await display(ctx, msg, btn.inline_keyboard)
+      } else {
+        const api = await walletAPI.hongbaoInfo({ openid: ctx.session.userinfo!.openid, link: link })
+        if (apiError(ctx, api, true)) {
+          btn.text(ctx.t('goBack'), '/start?rep=1')
+          await display(ctx, api?.msg ?? ctx.t('httpError'), btn.inline_keyboard, true)
+          return
+        }
+
+        const type = Number(api?.data?.type ?? 0)
+        const msg = ctx.t('hongbaoClaimMsg', {
+          step: 0,
+          type: type,
+          name: typeList[type],
+          token: api.data?.token ?? '',
+          amount: api.data?.amount ?? '',
+          user: api.data?.touser ?? '',
+          split: api.data?.split ?? '',
+        })
+        btn.text(ctx.t('hongbaoClaim'), `/wallet/hongbao?goto=claim&link=${link}&claim=1`).row()
+        btn.text(ctx.t('logo') + ' ' + ctx.t('brand'), '/start?rep=1')
+
+        await clearLastMessage(ctx)
+        await display(ctx, msg, btn.inline_keyboard)
+      }
     },
   }
   // 执行方法

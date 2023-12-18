@@ -19,7 +19,31 @@ const proxy = {
   // ...secured,
 
     // 用户session
-  'POST /api/user/index': (req, res) => {
+  'POST /api/user/info': (req, res) => {
+    console.log('req.body=', req.body)
+    return res.json({
+      err: 0,
+      msg: '',
+      success: true,
+      data: {
+        id: 1,
+        openid: "5279874291",
+        rank: 1,
+        username: "",
+        nickname: "fox",
+        language: "cn",
+        currency: "cny",
+        pin_code: "123",
+        invite_code: "imiTeui",
+        merchant: 1,
+        vending: 1,
+        version: 1,
+        created: "2023-12-06T11:17:28.895Z",
+        backup_account: '5279874291'
+      }
+    });
+  },
+  'POST /api/user/register': (req, res) => {
     console.log('req.body=', req.body)
     return res.json({
       err: 0,
