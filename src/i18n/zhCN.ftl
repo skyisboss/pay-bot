@@ -38,7 +38,7 @@ secured = 🛡️ 担保交易
 store = 🏪 自动售卖
 vending = 🏪 自动售卖
 invite = 🎁 邀好友 赚佣金
-setting = ⚙️ 设置
+setting = ⚙️ 个人设置
 homeWelcome =
     <b>{logo} {brand}</b> — 基于Telegram的安全加密货币钱包。
     转账收款 实时到账 无手续费
@@ -385,7 +385,7 @@ backupRemove = ⛔ 移除备份账户
 backupCopyAssets = 转移资产
 
 backupMsg = 
-    <b>{settingBackup}</b>
+    <b>{setting}</b> » {settingBackup}
 
     { NUMBER($status) ->
         *[0] · 若当前账户无法登录时，备份账户可用于转移资产
@@ -473,7 +473,7 @@ pincodeConfirm =
 ## ============================
 # 多语言设置
 settinglangMsg = 
-    <b>{settingLang}</b>
+    <b>{setting}</b> » {settingLang}
 
     · 当前显示语言: {$lang}
 
@@ -481,7 +481,7 @@ settinglangMsg =
 ## ============================
 # 本地货币
 settingCurrencytMsg = 
-    <b>{settingCurrency}</b>
+    <b>{setting}</b> » {settingCurrency}
 
     · 当前显示货币: {$currency}
 
