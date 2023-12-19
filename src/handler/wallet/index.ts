@@ -557,15 +557,16 @@ export const HistoryView = async (ctx: BotContext) => {
       switch (view) {
         case 3:
           {
-            const statusText = ['已领取', '未领取']
             let status = ''
             if (apiRes?.data?.available_claim === 0) {
-              status = '已领取'
+              status = ctx.t('hongbaoClaimStatus1')
             } else {
-              status = '未领取'
+              status = ctx.t('hongbaoClaimStatus0')
             }
             if (apiRes?.data?.type === 2) {
-              status = `领取(${apiRes?.data?.available_claim}/${apiRes?.data?.available_balance?.length})`
+              status = `${ctx.t('hongbaoClaimStatus1')}(${apiRes?.data?.available_claim}/${
+                apiRes?.data?.available_balance?.length
+              })`
             }
 
             msg = ctx.t('hongbaoHistoryDetail', {
