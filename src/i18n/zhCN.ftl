@@ -437,30 +437,37 @@ pincodeInputMsg =
     <b>{setting}</b> » {settingPinCode}
 
     { NUMBER($status) ->
-        *[0] · 请输入新密码 (6位数字)
-        [1] · 请输入旧密码 (6位数字)
+        *[0] · 请输入新密码 (4位数字)
+        [1] · 请输入旧密码 (4位数字)
     }
 
     { NUMBER($length) ->
-        *[0] <code>******</code>
-        [1] <code>{$text}*****</code>
-        [2] <code>{$text}****</code>
-        [3] <code>{$text}***</code>
-        [4] <code>{$text}**</code>
-        [5] <code>{$text}*</code>
-        [6] <code>{$text}</code>
+        *[0] <code>****</code>
+        [1] <code>{$text}***</code>
+        [2] <code>{$text}**</code>
+        [3] <code>{$text}*</code>
+        [4] <code>{$text}</code>
     }
-
+# 6位
+# { NUMBER($length) ->
+#     *[0] <code>******</code>
+#     [1] <code>{$text}*****</code>
+#     [2] <code>{$text}****</code>
+#     [3] <code>{$text}***</code>
+#     [4] <code>{$text}**</code>
+#     [5] <code>{$text}*</code>
+#     [6] <code>{$text}</code>
+# }
 pincodeConfirm = 
     <b>{setting}</b> » {settingPinCode}
 
-    · <code>{$text}</code>
-
     { NUMBER($step) ->
         *[0] 
+        · <code>{$text}</code>
+
         <b>👉 请确认是否使用此密码</b>
         [1] 
-        <b>✅ 密码设置成功</b>
+        <b>✅ 安全密码设置成功</b>
     }  
 
 ## ============================
@@ -515,7 +522,7 @@ inviteDetailMsg =
        ERC20 · USDT: {$erc20}
        BEP20 · USDT: {$bep20}
 
-    ⚠️ 受您邀请注册的新用户，可获得其手续费的 <b>50%</b> 佣金奖励
+    ⚠️ 通过邀请链接注册的新用户，您可获得其每次手续费的 <b>50%</b> 作为佣金奖励
 # <b>· 我的邀请: </b>
 # 今日邀请: {$count1}
 # 昨日邀请: {$count2}

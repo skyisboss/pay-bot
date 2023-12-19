@@ -8,7 +8,7 @@ export const userAPI = {
       data,
     })
   },
-  register: async (data: { openid: string; nickname: string }) => {
+  register: async (data: { openid: string; nickname: string; invite_code?: string }) => {
     return await makeRequest<ApiResult.Userinfo>({
       method: 'post',
       url: '/user/register',
@@ -22,7 +22,7 @@ export const userAPI = {
       data,
     })
   },
-  getConfig: async (data?: {}) => {
+  getConfig: async (data?: { openid: string }) => {
     return await makeRequest<ApiResult.Config>({
       method: 'post',
       url: '/user/config',
@@ -65,24 +65,48 @@ export const userAPI = {
     })
   },
   /**邀请 */
-  inviteDetail: async (data: { openid: string }) => {
+  // inviteDetail: async (data: { openid: string }) => {
+  //   return await makeRequest({
+  //     method: 'post',
+  //     url: '/user/invite/detail',
+  //     data,
+  //   })
+  // },
+  // inviteUsers: async (data: { openid: string; cate: string; page: number }) => {
+  //   return await makeRequest<InviteUsers, 'list'>({
+  //     method: 'post',
+  //     url: '/user/invite/users',
+  //     data,
+  //   })
+  // },
+  // inviteWithdraw: async (data: { openid: string }) => {
+  //   return await makeRequest({
+  //     method: 'post',
+  //     url: '/user/invite/withdraw',
+  //     data,
+  //   })
+  // },
+}
+
+export const inviteAPI = {
+  index: async (data: { openid: string }) => {
     return await makeRequest({
       method: 'post',
-      url: '/user/invite/detail',
+      url: '/invite/index',
       data,
     })
   },
-  inviteUsers: async (data: { openid: string; cate: string; page: number }) => {
+  detail: async (data: { openid: string; cate: string; page: number }) => {
     return await makeRequest<InviteUsers, 'list'>({
       method: 'post',
-      url: '/user/invite/users',
+      url: '/invite/detail',
       data,
     })
   },
-  inviteWithdraw: async (data: { openid: string }) => {
+  withdraw: async (data: { openid: string }) => {
     return await makeRequest({
       method: 'post',
-      url: '/user/invite/withdraw',
+      url: '/invite/withdraw',
       data,
     })
   },
@@ -90,7 +114,8 @@ export const userAPI = {
 
 interface InviteUsers {
   id: number
-  account: string
-  status: number
-  created_at: number
+  lavel: number
+  openid: string
+  parent: string
+  created_at: string
 }

@@ -215,7 +215,7 @@ export const PinCodeView = async (ctx: BotContext) => {
       const status = Number(request.params?.status ?? '0')
       const text = request.params?.text ?? ''
       const length = text.length
-      if (length === 6) {
+      if (length === 4) {
         // status = 1 时页面为要求输入旧密码，下一步则需要再次输入新的密码
         // 所以这一步需要校验旧密码是否正确，然后执行下一步【输入新的密码】
         if (status === 1) {
@@ -286,10 +286,10 @@ const LangView = async (ctx: BotContext) => {
         if (apiError(ctx, api)) {
           return
         }
-        await ctx.answerCallbackQuery({
-          text: 'ok',
-          show_alert: true,
-        })
+        // await ctx.answerCallbackQuery({
+        //   text: 'ok',
+        //   show_alert: true,
+        // })
       }
 
       let lang = ''
@@ -330,10 +330,10 @@ const CurrencyView = async (ctx: BotContext) => {
         if (apiError(ctx, api)) {
           return
         }
-        await ctx.answerCallbackQuery({
-          text: 'ok',
-          show_alert: true,
-        })
+        // await ctx.answerCallbackQuery({
+        //   text: 'ok',
+        //   show_alert: true,
+        // })
       }
 
       let currencyName = ''

@@ -1,5 +1,5 @@
 import { AnyObjetc, BotContext } from '@/@types/types'
-import { userAPI } from '@/api/user'
+import { inviteAPI, userAPI } from '@/api/user'
 import { SessionVersion, apiError, display, pager, restSceneInfo, showServerStop } from '@/util/helper'
 import { format } from 'date-fns'
 import { InlineKeyboard } from 'grammy'
@@ -35,7 +35,7 @@ const DetailView = async (ctx: BotContext) => {
       btn.text(ctx.t('inviteWithdraw'), '/invite/detail?goto=withdraw').row()
       btn.text(ctx.t('goBack'), '/invite')
 
-      const api = await userAPI.inviteDetail({ openid: ctx.session.userinfo!.openid })
+      const api = await inviteAPI.index({ openid: ctx.session.userinfo!.openid })
       if (apiError(ctx, api)) {
         return
       }
@@ -75,7 +75,7 @@ const DetailView = async (ctx: BotContext) => {
         }
       })
 
-      const api = await userAPI.inviteUsers({
+      const api = await inviteAPI.detail({
         openid: ctx.session.userinfo!.openid,
         page,
         cate,
@@ -86,7 +86,8 @@ const DetailView = async (ctx: BotContext) => {
       const rows = api.data?.rows ?? []
       let text = ctx.t('inviteUsersMsg') + `\r\n\r\n`
       rows.map(x => {
-        text += `${format(x?.created_at ?? 0, 'MM/dd HH:ii')} | ${x.account} \r\n`
+        const link = `<a href="tg://user?id=${x.openid}">${x.openid}</a>`
+        text += `👤 ${link} (${format(new Date(x?.created_at), 'yyyy/MM/dd HH:ii')})\r\n`
       })
       const totalItem = api?.data?.total ?? 0
       const pageSize = api?.data?.size ?? 5
@@ -100,7 +101,7 @@ const DetailView = async (ctx: BotContext) => {
       await display(ctx, text + `\r\n` + pageInfo, btn.inline_keyboard, true)
     },
     withdraw: async () => {
-      const api = await userAPI.inviteWithdraw({ openid: ctx.session.userinfo!.openid })
+      const api = await inviteAPI.withdraw({ openid: ctx.session.userinfo!.openid })
 
       if (apiError(ctx, api)) {
         return

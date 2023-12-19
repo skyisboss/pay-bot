@@ -56,7 +56,7 @@ instance.interceptors.response.use(
       url: error?.config.url,
       data: error?.config.data,
       message: error?.message,
-      response: error?.response.data,
+      response: error?.response?.data,
     }
     logger.error('http请求出错', { log })
     console.log(log)

@@ -32,6 +32,11 @@ export const useHandler = async (bot: MyBot) => {
         const request = parseCallbackQuery(compress.decode(`/wallet/hongbao?goto=claim&link=${ctx.match}`))
         ctx.session.request = request
       }
+      // 邀请链接注册逻辑写在 src/middleware/index.ts#44行
+      // if (action === 'i') {
+      //   const request = parseCallbackQuery(compress.decode(`/start?invite=${ctx.match}`))
+      //   ctx.session.request = request
+      // }
     }
     await callBotView(ctx)
   })
