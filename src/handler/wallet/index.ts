@@ -513,10 +513,20 @@ export const HistoryView = async (ctx: BotContext) => {
       api?.data?.rows?.map(x => {
         let showText = ''
         const d = new Date(x.created_at)
-        // 红包
         showText = `${getChainSymbol(ctx, x.token)} · ${formatAmount(x.amount)}`
+        // 红包
         if (3 === view) {
           showText = `${hbType[x.type]} · ${showText}`
+        }
+        // 处理佣金记录 【转账按钮】
+        if (1 === view) {
+          const xx = x as any
+          const direction = xx.to_user === ctx.session.userinfo?.openid ? '↘️' : '↗️'
+          if (xx.from_user === 'system-invite') {
+            showText = `佣金 · ${showText}`
+          } else {
+            showText = `${direction} · ${showText}`
+          }
         }
         btn.text(showText, `/wallet/history?goto=detail&view=${view}&id=${x.id}`).row()
       })
@@ -585,7 +595,7 @@ export const HistoryView = async (ctx: BotContext) => {
             time: time,
             amount: formatAmount(apiRes?.data?.amount),
             token: apiRes?.data?.token,
-            status: statusText[status],
+            status: statusText[apiRes?.data?.status ?? 0],
           })
           break
       }
