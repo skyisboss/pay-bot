@@ -462,3 +462,17 @@ export const BotLinkCode = (ctx: BotContext, link?: string) => {
   const bot_link = ctx.session.config?.bot_link
   return `${bot_link}?start=${link ?? ''}`
 }
+
+/**
+ * 无条件截取3小数点
+ * format=true,格式化千分位金额
+ */
+export const formatAmount = (value: any, format?: boolean) => {
+  const reg = /([0-9]+\.[0-9]{3})[0-9]*/
+  let str = String(value).replace(reg, '$1')
+  if (format) {
+    // 9,132,196.87
+    return Number(str).toLocaleString()
+  }
+  return str
+}

@@ -17,6 +17,7 @@ import {
   showServerStop,
   stopService,
   getChainSymbol,
+  formatAmount,
 } from '@/util/helper'
 import { Composer, Filter, FilterQuery, InlineKeyboard } from 'grammy'
 import { format } from 'date-fns'
@@ -484,6 +485,7 @@ export const HistoryView = async (ctx: BotContext) => {
     ctx.t('withdrawHistory'),
     ctx.t('hongbaoHistory'),
   ]
+  const hbType = [ctx.t('hongbao1'), ctx.t('hongbao2'), ctx.t('hongbao3')]
 
   const actions: AnyObjetc = {
     index: async () => {
@@ -508,15 +510,13 @@ export const HistoryView = async (ctx: BotContext) => {
       }
 
       const btn = new InlineKeyboard()
-      const typeList = [ctx.t('hongbao1'), ctx.t('hongbao2'), ctx.t('hongbao3')]
       api?.data?.rows?.map(x => {
         let showText = ''
         const d = new Date(x.created_at)
         // 红包
-        showText = `${x.amount} · ${getChainSymbol(ctx, x.token)}`
+        showText = `${getChainSymbol(ctx, x.token)} · ${formatAmount(x.amount)}`
         if (3 === view) {
-          // showText = `${format(d, 'MM/dd HH:ii')} · ${x.token} · 🧧${x.amount}`
-          showText = `🧧${showText}`
+          showText = `${hbType[x.type]} · ${showText}`
         }
         btn.text(showText, `/wallet/history?goto=detail&view=${view}&id=${x.id}`).row()
       })
@@ -551,35 +551,40 @@ export const HistoryView = async (ctx: BotContext) => {
       }
 
       const time = format(new Date(apiRes?.data?.created_at), 'yy/MM/dd HH:ii')
-      const status = [ctx.t('statusFail'), ctx.t('statusSuccess')]
 
       let msg = ''
+      let status = 0
       switch (view) {
         case 3:
-          const hbType = [ctx.t('hongbao1'), ctx.t('hongbao2'), ctx.t('hongbao3')]
-          let status = 0
-          if (apiRes?.data?.type === 2) {
-            status = 2
-          } else if (apiRes?.data?.available_claim === 0) {
-            status = 1
-          }
-          msg = ctx.t('hongbaoHistoryDetail', {
-            name: hbType[apiRes?.data?.type],
-            time: time,
-            amount: apiRes?.data?.amount,
-            token: apiRes?.data?.token,
-            status: status,
-            claim: apiRes?.data?.available_claim,
-            total: apiRes?.data?.available_balance?.length,
-          })
-          break
+          {
+            const statusText = ['已领取', '未领取']
+            let status = ''
+            if (apiRes?.data?.available_claim === 0) {
+              status = '已领取'
+            } else {
+              status = '未领取'
+            }
+            if (apiRes?.data?.type === 2) {
+              status = `领取(${apiRes?.data?.available_claim}/${apiRes?.data?.available_balance?.length})`
+            }
 
+            msg = ctx.t('hongbaoHistoryDetail', {
+              name: hbType[apiRes?.data?.type ?? 0],
+              time: time,
+              amount: formatAmount(apiRes?.data?.amount),
+              token: apiRes?.data?.token,
+              status: status,
+            })
+          }
+          break
         default:
+          const statusText = [ctx.t('statusFail'), ctx.t('statusSuccess')]
           msg = ctx.t('depositHistoryDetail', {
+            item: view || 0,
             time: time,
-            amount: apiRes?.data?.amount,
+            amount: formatAmount(apiRes?.data?.amount),
             token: apiRes?.data?.token,
-            status: 1,
+            status: statusText[status],
           })
           break
       }

@@ -166,6 +166,7 @@ interface HistoryItem {
   token: string
   amount: string
   hbType?: string
+  type: number
   created_at: number
 }
 

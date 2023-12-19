@@ -220,7 +220,11 @@ historyListMsg =
     · {$pageInfo}
 
 depositHistoryDetail = 
-    {depositHistory} {$time}
+    { NUMBER($item) ->
+        *[0] {depositHistory}
+        [1] {transferHistory}
+        [2] {withdrawHistory}
+    } ({$time})
 
     币种: {$token}
     ------------------------
@@ -229,12 +233,12 @@ depositHistoryDetail =
     状态: {$status}
 hongbaoHistoryDetail = 
     {$name} 
-    
+
     {$time}
     ------------------------
     金额: {$amount} U · {$token}
     ------------------------
-    已领取({$claim}/{$total})
+    状态: {$status}
 ## ============================
 # 红包
 hongbao1 = 🧧 普通红包 
@@ -245,7 +249,6 @@ hongbaoBalanceFail = 余额不足
 hongbaoInputFail = 无效输入
 hongbaoUserFail = 用户不存在
 hongbaoUserSelfFail = 不能发送给自己
-
 hongbaoClaim = 🧧 立即领取
 hongbaoClaimMsg = 
     { NUMBER($step) ->
